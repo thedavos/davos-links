@@ -1,0 +1,41 @@
+---
+description: Davos Links product, architecture, and design rules
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Davos Links
+
+Build Davos Links as a Cloudflare-native URL shortener for `links.davosdo.dev`.
+
+## Non-Negotiables
+
+- TanStack Start on Cloudflare Workers.
+- Better Auth at `/api/auth/*`.
+- D1 binding `DB`.
+- KV binding `LINK_CACHE`.
+- Workers Analytics Engine binding `ANALYTICS`.
+- Dashboard at `/dashboard`.
+- Public redirects at `/:shortPath`.
+
+## Runtime Architecture
+
+- D1 is the source of truth for auth, workspaces, domains, links, tags, campaigns, API keys, and daily aggregates.
+- KV is a hot redirect cache.
+- Analytics Engine receives compact click events from redirect handling.
+- Better Auth owns sessions and cookies.
+- Cloudflare bindings are server-only.
+
+## Reserved Paths
+
+Reject `dashboard`, `api`, `health`, `assets`, `_build`, `_static`, `favicon.ico`, `robots.txt`, `sitemap.xml`, `login`, `logout`, `register`, `settings`, `admin`, and `app`.
+
+Also reject custom paths starting with `dashboard/`, `api/`, `assets/`, `_build/`, or `_static/`.
+
+## UI Rules
+
+- Vercel-inspired, monochrome, precise.
+- Geist-style sans and mono typography.
+- Compact controls, fine borders, clear hierarchy.
+- No decorative gradients, glassmorphism, oversized cards, or visual clutter.
