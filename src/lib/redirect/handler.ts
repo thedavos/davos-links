@@ -35,7 +35,12 @@ export async function handlePublicRedirect(request: Request, ctx?: ExecutionCont
       ? mergeQueryParams(link.destination_url, url)
       : link.destination_url
 
-  ctx?.waitUntil(trackClick(request, link))
+  const clickTracking = trackClick(request, link)
+  if (ctx) {
+    ctx.waitUntil(clickTracking)
+  } else {
+    await clickTracking
+  }
   return Response.redirect(destination, link.redirect_type)
 }
 

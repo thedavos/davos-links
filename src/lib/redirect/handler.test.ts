@@ -94,6 +94,18 @@ describe('handlePublicRedirect', () => {
     expect(mocks.trackClick).toHaveBeenCalledWith(expect.any(Request), link)
   })
 
+  it('tracks active redirects when an execution context is unavailable', async () => {
+    const link = makeCachedLink()
+    mocks.resolveLink.mockResolvedValue({ link, cacheStatus: 'hit' })
+
+    const response = await handlePublicRedirect(
+      new Request('https://links.davosdo.dev/railway'),
+    )
+
+    expect(response.status).toBe(302)
+    expect(mocks.trackClick).toHaveBeenCalledWith(expect.any(Request), link)
+  })
+
   it('preserves destination query exactly when preserve query params is off', async () => {
     mocks.resolveLink.mockResolvedValue({
       link: makeCachedLink({ preserve_query_params: 0 }),
