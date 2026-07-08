@@ -29,7 +29,7 @@ Public redirect flow:
 1. Parse host and path.
 2. Reject reserved/internal paths.
 3. Normalize the short path.
-4. Resolve `link:${host}:${short_path_normalized}` from `LINK_CACHE`.
+4. Resolve `link:${host}:${short_path_normalized}` from `SHORT_LINK_CACHE`.
 5. Fall back to D1 on miss.
 6. Cache active link payloads with TTL.
 7. Respect inactive, archived, expired, and fallback behavior.

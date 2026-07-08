@@ -45,7 +45,7 @@ type CampaignInput = {
 }
 
 export async function listLinks(filters: LinkFilters = {}) {
-  await ensureDefaultWorkspace(env.DB)
+  await ensureDefaultWorkspace(env.LINKS_DB)
   const where = ['links.workspace_id = ?', 'links.deleted_at IS NULL']
   const binds: unknown[] = [DEFAULT_WORKSPACE_ID]
 
@@ -95,7 +95,7 @@ export async function listLinks(filters: LinkFilters = {}) {
   const limit = normalizeLimit(filters.limit)
   const offset = Math.max(0, Math.trunc(filters.offset ?? 0))
 
-  const { results } = await env.DB.prepare(
+  const { results } = await env.LINKS_DB.prepare(
     `SELECT links.*, domains.domain, COALESCE(SUM(daily_link_metrics.clicks), 0) AS clicks,
       (
         SELECT COALESCE(json_group_array(json_object(
@@ -142,8 +142,8 @@ export async function listLinks(filters: LinkFilters = {}) {
 }
 
 export async function getLink(id: string) {
-  await ensureDefaultWorkspace(env.DB)
-  const row = await env.DB.prepare(
+  await ensureDefaultWorkspace(env.LINKS_DB)
+  const row = await env.LINKS_DB.prepare(
     `SELECT links.*, domains.domain, COALESCE(SUM(daily_link_metrics.clicks), 0) AS clicks,
       (
         SELECT COALESCE(json_group_array(json_object(
@@ -191,7 +191,7 @@ export async function checkPath(shortPath: string) {
   const validation = validateShortPath(shortPath)
   if (!validation.ok) return { available: false, error: validation.error }
 
-  const existing = await env.DB.prepare(
+  const existing = await env.LINKS_DB.prepare(
     `SELECT id FROM links
      WHERE domain_id = ? AND short_path_normalized = ? AND deleted_at IS NULL`,
   )
@@ -202,7 +202,7 @@ export async function checkPath(shortPath: string) {
 }
 
 export async function createLink(input: LinkInput) {
-  await ensureDefaultWorkspace(env.DB)
+  await ensureDefaultWorkspace(env.LINKS_DB)
   if (!isValidDestinationUrl(input.destinationUrl)) {
     return { ok: false as const, error: 'Enter a valid http or https URL.' }
   }
@@ -230,7 +230,7 @@ export async function createLink(input: LinkInput) {
   const title = input.title?.trim() || new URL(destination).hostname
   const redirectType = normalizeRedirectType(input.redirectType)
 
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `INSERT INTO links (
       id, workspace_id, domain_id, title, description, destination_url,
       short_path, short_path_normalized, redirect_type, status,
@@ -279,7 +279,7 @@ export async function updateLink(id: string, input: Partial<LinkInput>) {
       return { ok: false as const, error: validation.error, field: 'shortPath' }
     }
 
-    const existing = await env.DB.prepare(
+    const existing = await env.LINKS_DB.prepare(
       `SELECT id FROM links
        WHERE domain_id = ? AND short_path_normalized = ? AND deleted_at IS NULL AND id != ?`,
     )
@@ -299,7 +299,7 @@ export async function updateLink(id: string, input: Partial<LinkInput>) {
   }
 
   const now = new Date().toISOString()
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `UPDATE links SET
       title = ?,
       description = ?,
@@ -343,8 +343,8 @@ export async function updateLink(id: string, input: Partial<LinkInput>) {
 }
 
 export async function listTags() {
-  await ensureDefaultWorkspace(env.DB)
-  const { results } = await env.DB.prepare(
+  await ensureDefaultWorkspace(env.LINKS_DB)
+  const { results } = await env.LINKS_DB.prepare(
     `SELECT tags.*, COUNT(link_tags.link_id) AS link_count
      FROM tags
      LEFT JOIN link_tags ON link_tags.tag_id = tags.id
@@ -358,7 +358,7 @@ export async function listTags() {
 }
 
 export async function createTag(input: TagInput) {
-  await ensureDefaultWorkspace(env.DB)
+  await ensureDefaultWorkspace(env.LINKS_DB)
   const name = input.name?.trim()
   if (!name) return { ok: false as const, error: 'Tag name is required.', field: 'name' }
 
@@ -370,14 +370,14 @@ export async function createTag(input: TagInput) {
   }
   const now = new Date().toISOString()
   const id = `tag_${crypto.randomUUID()}`
-  const existing = await env.DB.prepare(
+  const existing = await env.LINKS_DB.prepare(
     `SELECT id FROM tags WHERE workspace_id = ? AND slug = ?`,
   )
     .bind(DEFAULT_WORKSPACE_ID, slug)
     .first<{ id: string }>()
   if (existing) return { ok: false as const, error: 'That tag already exists.' }
 
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `INSERT INTO tags (id, workspace_id, name, slug, color, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   )
@@ -398,14 +398,14 @@ export async function updateTag(id: string, input: TagInput) {
   if (color === false) {
     return { ok: false as const, error: 'Use a 6-digit hex color.', field: 'color' }
   }
-  const existing = await env.DB.prepare(
+  const existing = await env.LINKS_DB.prepare(
     `SELECT id FROM tags WHERE workspace_id = ? AND slug = ? AND id != ?`,
   )
     .bind(DEFAULT_WORKSPACE_ID, slug, id)
     .first<{ id: string }>()
   if (existing) return { ok: false as const, error: 'That tag already exists.' }
 
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `UPDATE tags SET name = ?, slug = ?, color = ?, updated_at = ?
      WHERE id = ? AND workspace_id = ?`,
   )
@@ -424,8 +424,8 @@ export async function updateTag(id: string, input: TagInput) {
 export async function deleteTag(id: string) {
   const tag = await getTag(id)
   if (!tag) return { ok: false as const, error: 'Tag not found.' }
-  await env.DB.prepare(`DELETE FROM link_tags WHERE tag_id = ?`).bind(id).run()
-  await env.DB.prepare(`DELETE FROM tags WHERE id = ? AND workspace_id = ?`)
+  await env.LINKS_DB.prepare(`DELETE FROM link_tags WHERE tag_id = ?`).bind(id).run()
+  await env.LINKS_DB.prepare(`DELETE FROM tags WHERE id = ? AND workspace_id = ?`)
     .bind(id, DEFAULT_WORKSPACE_ID)
     .run()
   return { ok: true as const, data: { id } }
@@ -439,10 +439,10 @@ export async function setLinkTags(id: string, tagIds: string[]) {
   if (tags.length !== uniqueIds.length) {
     return { ok: false as const, error: 'One or more tags were not found.' }
   }
-  await env.DB.prepare(`DELETE FROM link_tags WHERE link_id = ?`).bind(id).run()
+  await env.LINKS_DB.prepare(`DELETE FROM link_tags WHERE link_id = ?`).bind(id).run()
   const now = new Date().toISOString()
   for (const tagId of uniqueIds) {
-    await env.DB.prepare(
+    await env.LINKS_DB.prepare(
       `INSERT OR IGNORE INTO link_tags (link_id, tag_id, workspace_id, created_at)
        VALUES (?, ?, ?, ?)`,
     )
@@ -453,8 +453,8 @@ export async function setLinkTags(id: string, tagIds: string[]) {
 }
 
 export async function listCampaigns() {
-  await ensureDefaultWorkspace(env.DB)
-  const { results } = await env.DB.prepare(
+  await ensureDefaultWorkspace(env.LINKS_DB)
+  const { results } = await env.LINKS_DB.prepare(
     `SELECT campaigns.*, COUNT(campaign_links.link_id) AS link_count
      FROM campaigns
      LEFT JOIN campaign_links ON campaign_links.campaign_id = campaigns.id
@@ -468,7 +468,7 @@ export async function listCampaigns() {
 }
 
 export async function createCampaign(input: CampaignInput) {
-  await ensureDefaultWorkspace(env.DB)
+  await ensureDefaultWorkspace(env.LINKS_DB)
   const name = input.name?.trim()
   if (!name) return { ok: false as const, error: 'Campaign name is required.', field: 'name' }
 
@@ -478,14 +478,14 @@ export async function createCampaign(input: CampaignInput) {
   }
   const now = new Date().toISOString()
   const id = `cam_${crypto.randomUUID()}`
-  const existing = await env.DB.prepare(
+  const existing = await env.LINKS_DB.prepare(
     `SELECT id FROM campaigns WHERE workspace_id = ? AND slug = ? AND archived_at IS NULL`,
   )
     .bind(DEFAULT_WORKSPACE_ID, slug)
     .first<{ id: string }>()
   if (existing) return { ok: false as const, error: 'That campaign already exists.' }
 
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `INSERT INTO campaigns (
       id, workspace_id, name, slug, description, starts_at, ends_at,
       created_at, updated_at, archived_at
@@ -515,7 +515,7 @@ export async function updateCampaign(id: string, input: CampaignInput) {
   if (!slug) {
     return { ok: false as const, error: 'Campaign slug is required.', field: 'slug' }
   }
-  const existing = await env.DB.prepare(
+  const existing = await env.LINKS_DB.prepare(
     `SELECT id FROM campaigns
      WHERE workspace_id = ? AND slug = ? AND archived_at IS NULL AND id != ?`,
   )
@@ -523,7 +523,7 @@ export async function updateCampaign(id: string, input: CampaignInput) {
     .first<{ id: string }>()
   if (existing) return { ok: false as const, error: 'That campaign already exists.' }
 
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `UPDATE campaigns SET
       name = ?,
       slug = ?,
@@ -553,7 +553,7 @@ export async function updateCampaign(id: string, input: CampaignInput) {
 export async function deleteCampaign(id: string) {
   const campaign = await getCampaign(id)
   if (!campaign) return { ok: false as const, error: 'Campaign not found.' }
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `UPDATE campaigns SET archived_at = ?, updated_at = ?
      WHERE id = ? AND workspace_id = ?`,
   )
@@ -570,10 +570,10 @@ export async function setLinkCampaigns(id: string, campaignIds: string[]) {
   if (campaigns.length !== uniqueIds.length) {
     return { ok: false as const, error: 'One or more campaigns were not found.' }
   }
-  await env.DB.prepare(`DELETE FROM campaign_links WHERE link_id = ?`).bind(id).run()
+  await env.LINKS_DB.prepare(`DELETE FROM campaign_links WHERE link_id = ?`).bind(id).run()
   const now = new Date().toISOString()
   for (const campaignId of uniqueIds) {
-    await env.DB.prepare(
+    await env.LINKS_DB.prepare(
       `INSERT OR IGNORE INTO campaign_links (
         campaign_id, link_id, workspace_id, created_at
       ) VALUES (?, ?, ?, ?)`,
@@ -595,7 +595,7 @@ export async function archiveLink(id: string) {
 export async function deleteLink(id: string) {
   const link = await getLink(id)
   if (!link) return { ok: false as const, error: 'Link not found.' }
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `UPDATE links SET deleted_at = ?, updated_at = ? WHERE id = ?`,
   )
     .bind(new Date().toISOString(), new Date().toISOString(), id)
@@ -607,10 +607,10 @@ export async function deleteLink(id: string) {
 export async function resolveLink(host: string, shortPath: string) {
   const normalized = normalizeShortPath(shortPath)
   const cacheKey = linkCacheKey(host, normalized)
-  const cached = await env.LINK_CACHE.get<CachedLink>(cacheKey, 'json')
+  const cached = await env.SHORT_LINK_CACHE.get<CachedLink>(cacheKey, 'json')
   if (cached) return { link: cached, cacheStatus: 'hit' as const }
 
-  const link = await env.DB.prepare(
+  const link = await env.LINKS_DB.prepare(
     `SELECT links.*, domains.domain
      FROM links
      JOIN domains ON domains.id = links.domain_id
@@ -624,7 +624,7 @@ export async function resolveLink(host: string, shortPath: string) {
 
   if (!link) return { link: null, cacheStatus: 'miss' as const }
 
-  await env.LINK_CACHE.put(cacheKey, JSON.stringify(link), {
+  await env.SHORT_LINK_CACHE.put(cacheKey, JSON.stringify(link), {
     expirationTtl: CACHE_TTL_SECONDS,
   })
 
@@ -637,7 +637,7 @@ async function setLinkStatus(
 ) {
   const link = await getLink(id)
   if (!link) return { ok: false as const, error: 'Link not found.' }
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `UPDATE links SET status = ?, updated_at = ? WHERE id = ? AND workspace_id = ?`,
   )
     .bind(status, new Date().toISOString(), id, DEFAULT_WORKSPACE_ID)
@@ -660,8 +660,8 @@ function normalizeRedirectType(value?: number) {
 }
 
 export async function getTag(id: string) {
-  await ensureDefaultWorkspace(env.DB)
-  return env.DB.prepare(
+  await ensureDefaultWorkspace(env.LINKS_DB)
+  return env.LINKS_DB.prepare(
     `SELECT tags.*, COUNT(link_tags.link_id) AS link_count
      FROM tags
      LEFT JOIN link_tags ON link_tags.tag_id = tags.id
@@ -673,8 +673,8 @@ export async function getTag(id: string) {
 }
 
 export async function getCampaign(id: string) {
-  await ensureDefaultWorkspace(env.DB)
-  return env.DB.prepare(
+  await ensureDefaultWorkspace(env.LINKS_DB)
+  return env.LINKS_DB.prepare(
     `SELECT campaigns.*, COUNT(campaign_links.link_id) AS link_count
      FROM campaigns
      LEFT JOIN campaign_links ON campaign_links.campaign_id = campaigns.id
@@ -738,7 +738,7 @@ function uniqueStrings(values: string[]) {
 async function listTagsByIds(ids: string[]) {
   if (!ids.length) return []
   const placeholders = ids.map(() => '?').join(', ')
-  const { results } = await env.DB.prepare(
+  const { results } = await env.LINKS_DB.prepare(
     `SELECT * FROM tags WHERE workspace_id = ? AND id IN (${placeholders})`,
   )
     .bind(DEFAULT_WORKSPACE_ID, ...ids)
@@ -749,7 +749,7 @@ async function listTagsByIds(ids: string[]) {
 async function listCampaignsByIds(ids: string[]) {
   if (!ids.length) return []
   const placeholders = ids.map(() => '?').join(', ')
-  const { results } = await env.DB.prepare(
+  const { results } = await env.LINKS_DB.prepare(
     `SELECT * FROM campaigns
      WHERE workspace_id = ? AND archived_at IS NULL AND id IN (${placeholders})`,
   )
@@ -764,5 +764,5 @@ function linkCacheKey(host: string, path: string) {
 
 async function invalidateLinkCache(host: string, path: string) {
   if (!host) return
-  await env.LINK_CACHE.delete(linkCacheKey(host, path))
+  await env.SHORT_LINK_CACHE.delete(linkCacheKey(host, path))
 }

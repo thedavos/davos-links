@@ -7,7 +7,7 @@ const cloudflareEnv = env as Env & { BETTER_AUTH_SECRET?: string }
 
 export function getAuth() {
   return betterAuth({
-    database: cloudflareEnv.DB,
+    database: cloudflareEnv.LINKS_DB,
     secret:
       cloudflareEnv.BETTER_AUTH_SECRET ??
       'dev-only-davos-links-secret-change-before-production',

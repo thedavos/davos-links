@@ -11,9 +11,9 @@ Davos Links is a Cloudflare-native branded URL shortener for `links.davosdo.dev`
 - TanStack Start, React, TypeScript, TanStack Router
 - Tailwind CSS
 - Cloudflare Workers
-- Cloudflare D1 binding: `DB`
-- Cloudflare KV binding: `LINK_CACHE`
-- Workers Analytics Engine binding: `ANALYTICS`
+- Cloudflare D1 binding: `LINKS_DB`
+- Cloudflare KV binding: `SHORT_LINK_CACHE`
+- Workers Analytics Engine binding: `CLICK_ANALYTICS`
 - Better Auth at `/api/auth/*`
 - Wrangler
 
@@ -96,7 +96,7 @@ Reserved paths are blocked for custom short links: `dashboard`, `api`, `health`,
 
 1. Create Cloudflare resources:
    - D1 database: `davos-links-db`
-   - KV namespace: `LINK_CACHE`
+   - KV namespace: `SHORT_LINK_CACHE`
    - Analytics Engine dataset: `davos_links_clicks`
 2. Replace placeholder IDs in `wrangler.jsonc`.
 3. Run `pnpm cf-typegen`.

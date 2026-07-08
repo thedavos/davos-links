@@ -353,9 +353,9 @@ export function SettingsPage({
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <Setting label="Dominio principal" value={DEFAULT_DOMAIN} />
-        <Setting label="Base de datos" value="DB" />
-        <Setting label="Caché de enlaces" value="LINK_CACHE" />
-        <Setting label="Métricas" value="ANALYTICS" />
+        <Setting label="Base de datos" value="LINKS_DB" />
+        <Setting label="Caché de enlaces" value="SHORT_LINK_CACHE" />
+        <Setting label="Métricas" value="CLICK_ANALYTICS" />
       </div>
     </>
   )

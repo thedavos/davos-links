@@ -23,7 +23,7 @@ describe('auth server helpers', () => {
       api: { getSession: authMocks.getSession },
     })
     setCloudflareEnv({
-      DB: {} as D1Database,
+      LINKS_DB: {} as D1Database,
       BETTER_AUTH_URL: 'https://links.davosdo.dev',
       BETTER_AUTH_SECRET: 'unit-test-secret-with-more-than-thirty-two-characters',
     })

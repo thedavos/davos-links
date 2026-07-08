@@ -82,7 +82,7 @@ export async function trackClick(request: Request, link: CachedLink) {
   const isBot = detectBot(userAgent)
   const timestamp = Date.now()
 
-  env.ANALYTICS.writeDataPoint({
+  env.CLICK_ANALYTICS.writeDataPoint({
     indexes: [link.id],
     blobs: [
       link.id,
@@ -110,7 +110,7 @@ export async function trackClick(request: Request, link: CachedLink) {
   })
 
   const day = new Date().toISOString().slice(0, 10)
-  await env.DB.prepare(
+  await env.LINKS_DB.prepare(
     `INSERT INTO daily_link_metrics (
       id, workspace_id, link_id, metric_date, clicks, bot_clicks, created_at, updated_at
     ) VALUES (?, ?, ?, ?, 1, ?, ?, ?)
@@ -136,7 +136,7 @@ export async function getAnalyticsOverview() {
 }
 
 export async function getAnalyticsOverviewForRange(range: DateRange) {
-  const { results } = await env.DB.prepare(
+  const { results } = await env.LINKS_DB.prepare(
     `SELECT metric_date, SUM(clicks) AS clicks, SUM(bot_clicks) AS bot_clicks
      FROM daily_link_metrics
      WHERE workspace_id = ? AND metric_date BETWEEN ? AND ?
@@ -146,7 +146,7 @@ export async function getAnalyticsOverviewForRange(range: DateRange) {
     .bind(DEFAULT_WORKSPACE_ID, range.from, range.to)
     .all<{ metric_date: string; clicks: number; bot_clicks: number }>()
 
-  const totals = await env.DB.prepare(
+  const totals = await env.LINKS_DB.prepare(
     `SELECT
       COALESCE(SUM(clicks), 0) AS total_clicks,
       COALESCE(SUM(CASE WHEN metric_date >= date('now', '-7 days') THEN clicks ELSE 0 END), 0) AS clicks_7d,
@@ -157,7 +157,7 @@ export async function getAnalyticsOverviewForRange(range: DateRange) {
     .bind(DEFAULT_WORKSPACE_ID, range.from, range.to)
     .first<{ total_clicks: number; clicks_7d: number; clicks_30d: number }>()
 
-  const activeLinks = await env.DB.prepare(
+  const activeLinks = await env.LINKS_DB.prepare(
     `SELECT COUNT(*) AS active_links FROM links
      WHERE workspace_id = ? AND status = 'active' AND deleted_at IS NULL`,
   )
@@ -177,7 +177,7 @@ export async function getAnalyticsOverviewForRange(range: DateRange) {
 }
 
 export async function getLinkAnalytics(linkId: string, range = defaultRange()) {
-  const { results } = await env.DB.prepare(
+  const { results } = await env.LINKS_DB.prepare(
     `SELECT metric_date, clicks, bot_clicks
      FROM daily_link_metrics
      WHERE workspace_id = ?
@@ -204,7 +204,7 @@ export async function exportMetricsCsv(range: DateRange, linkId?: string | null)
     binds.push(linkId)
   }
 
-  const { results } = await env.DB.prepare(
+  const { results } = await env.LINKS_DB.prepare(
     `SELECT
       daily_link_metrics.metric_date,
       links.id AS link_id,

@@ -72,9 +72,9 @@ export function installCloudflareMocks(options: {
   const kv = createKvMock(options.kvInitial)
   const analytics = createAnalyticsMock()
   setCloudflareEnv({
-    DB: db.db,
-    LINK_CACHE: kv.kv,
-    ANALYTICS: analytics,
+    LINKS_DB: db.db,
+    SHORT_LINK_CACHE: kv.kv,
+    CLICK_ANALYTICS: analytics,
   })
   return { ...db, ...kv, analytics }
 }
