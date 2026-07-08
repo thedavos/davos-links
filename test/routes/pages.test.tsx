@@ -7,19 +7,19 @@ import {
 } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MiniBars } from '../../src/components/Charts'
-import { DashboardShell, PageHeader } from '../../src/components/DashboardShell'
-import { LoginPage } from '../../src/features/auth/LoginPage'
-import { HomePage } from '../../src/features/home/HomePage'
-import { LinkDetailPage } from '../../src/features/dashboard/LinkDetailPage'
-import { LinksPage } from '../../src/features/dashboard/LinksPage'
-import { NewLinkPage } from '../../src/features/dashboard/NewLinkPage'
-import { OverviewPage } from '../../src/features/dashboard/OverviewPage'
+import { MiniBars } from '#/components/Charts'
+import { DashboardShell, PageHeader } from '#/components/DashboardShell'
+import { LoginPage } from '#/features/auth/LoginPage'
+import { HomePage } from '#/features/home/HomePage'
+import { LinkDetailPage } from '#/features/dashboard/LinkDetailPage'
+import { LinksPage } from '#/features/dashboard/LinksPage'
+import { NewLinkPage } from '#/features/dashboard/NewLinkPage'
+import { OverviewPage } from '#/features/dashboard/OverviewPage'
 import {
   CampaignsPage,
   SettingsPage,
   TagsPage,
-} from '../../src/features/dashboard/PlaceholderPages'
+} from '#/features/dashboard/PlaceholderPages'
 import { makeLinkRow } from '../helpers/factories'
 
 const routerMocks = vi.hoisted(() => ({
@@ -109,6 +109,9 @@ describe('public and shared UI', () => {
 
     const { rerender } = render(<MiniBars data={[]} />)
     expect(screen.getByText('Todavía no hay datos')).toBeInTheDocument()
+    rerender(<MiniBars data={[{ clicks: 1 }]} />)
+    expect(screen.getByTitle('1')).toHaveClass('w-2')
+    expect(screen.getByTitle('1')).toHaveStyle({ height: '50%' })
     rerender(<MiniBars data={[{ clicks: 5 }, { clicks: 10 }]} />)
     expect(screen.getByTitle('10')).toBeInTheDocument()
   })
