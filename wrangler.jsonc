@@ -14,14 +14,14 @@
     {
       "binding": "LINKS_DB",
       "database_name": "davos-links-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "9e8f825a-0d10-449e-9b7c-769d953c243f",
       "migrations_dir": "migrations"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "SHORT_LINK_CACHE",
-      "id": "00000000000000000000000000000000"
+      "id": "ba8d84a8cc8749f3ba5cbef764d2e4ae"
     }
   ],
   "analytics_engine_datasets": [
