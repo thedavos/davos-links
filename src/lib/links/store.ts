@@ -3,16 +3,16 @@ import {
   CACHE_TTL_SECONDS,
   DEFAULT_DOMAIN_ID,
   DEFAULT_WORKSPACE_ID,
-} from '../constants'
-import type { CachedLink, CampaignRow, LinkFilters, LinkRow, TagRow } from '../types'
+} from '#/lib/constants'
+import type { CachedLink, CampaignRow, LinkFilters, LinkRow, TagRow } from '#/lib/types'
 import {
   generateRandomSlug,
   isValidDestinationUrl,
   normalizeDestinationUrl,
   normalizeShortPath,
   validateShortPath,
-} from '../validation/links'
-import { ensureDefaultWorkspace } from '../db/seed'
+} from '#/lib/validation/links'
+import { ensureDefaultWorkspace } from '#/lib/db/seed'
 
 type LinkInput = {
   title?: string

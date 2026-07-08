@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { requireUser } from '../../../lib/auth/server'
-import { exportMetricsCsv, parseDateRange } from '../../../lib/analytics'
+import { requireUser } from '#/lib/auth/server'
+import { exportMetricsCsv, parseDateRange } from '#/lib/analytics/index'
 
 export async function analyticsExportCsvHandler(request: Request) {
   await requireUser(request.headers)

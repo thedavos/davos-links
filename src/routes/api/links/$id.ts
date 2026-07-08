@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json, readJson } from '../../../lib/http'
-import { requireUser } from '../../../lib/auth/server'
-import { deleteLink, getLink, updateLink } from '../../../lib/links/store'
+import { json, readJson } from '#/lib/http'
+import { requireUser } from '#/lib/auth/server'
+import { deleteLink, getLink, updateLink } from '#/lib/links/store'
 
 export async function getLinkHandler(request: Request, id: string) {
   await requireUser(request.headers)

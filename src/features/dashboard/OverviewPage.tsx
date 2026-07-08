@@ -1,16 +1,16 @@
 import { Link } from '@tanstack/react-router'
 import { Download, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { MiniBars } from '../../components/Charts'
-import { PageHeader } from '../../components/DashboardShell'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
+import { MiniBars } from '#/components/Charts'
+import { PageHeader } from '#/components/DashboardShell'
+import { Button } from '#/components/ui/button'
+import { Card } from '#/components/ui/card'
 import {
   DateRangePicker,
   defaultDateRange,
   type DateRange,
-} from '../../components/ui/date-range'
-import type { LinkRow } from '../../lib/types'
+} from '#/components/ui/date-range'
+import type { LinkRow } from '#/lib/types'
 
 type Overview = {
   totals: {

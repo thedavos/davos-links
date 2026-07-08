@@ -1,18 +1,18 @@
 import { Link } from '@tanstack/react-router'
 import { Copy, Download, ExternalLink, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { MiniBars } from '../../components/Charts'
-import { PageHeader } from '../../components/DashboardShell'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
+import { MiniBars } from '#/components/Charts'
+import { PageHeader } from '#/components/DashboardShell'
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import { Card } from '#/components/ui/card'
 import {
   DateRangePicker,
   defaultDateRange,
   type DateRange,
-} from '../../components/ui/date-range'
-import { PUBLIC_ORIGIN } from '../../lib/constants'
-import type { LinkRow } from '../../lib/types'
+} from '#/components/ui/date-range'
+import { PUBLIC_ORIGIN } from '#/lib/constants'
+import type { LinkRow } from '#/lib/types'
 
 export function LinkDetailPage({ id }: { id: string }) {
   const [link, setLink] = useState<LinkRow | null | undefined>(undefined)

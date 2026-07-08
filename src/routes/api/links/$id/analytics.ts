@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { requireUser } from '../../../../lib/auth/server'
-import { getLinkAnalytics, parseDateRange } from '../../../../lib/analytics'
-import { json } from '../../../../lib/http'
+import { requireUser } from '#/lib/auth/server'
+import { getLinkAnalytics, parseDateRange } from '#/lib/analytics/index'
+import { json } from '#/lib/http'
 
 export async function linkAnalyticsHandler(request: Request, id: string) {
   await requireUser(request.headers)

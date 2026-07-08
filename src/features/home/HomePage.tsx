@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight, BarChart3, Gauge, Link2, type LucideIcon } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
+import { Button } from '#/components/ui/button'
+import { Card } from '#/components/ui/card'
 
 export function HomePage() {
   return (

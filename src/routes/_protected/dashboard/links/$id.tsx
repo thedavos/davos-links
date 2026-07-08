@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { LinkDetailPage } from '../../../../features/dashboard/LinkDetailPage'
+import { LinkDetailPage } from '#/features/dashboard/LinkDetailPage'
 
 export const Route = createFileRoute('/_protected/dashboard/links/$id')({
   component: LinkDetailRoute,

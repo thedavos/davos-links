@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { handlePublicRedirect } from '../lib/redirect/handler'
+import { handlePublicRedirect } from '#/lib/redirect/handler'
 
 export const Route = createFileRoute('/$shortPath')({
   server: {

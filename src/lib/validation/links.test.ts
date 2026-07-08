@@ -7,7 +7,7 @@ import {
   normalizeDestinationUrl,
   normalizeShortPath,
   validateShortPath,
-} from './links'
+} from '#/lib/validation/links'
 
 describe('link validation helpers', () => {
   it('normalizes URLs, leading slashes, trailing slashes, and case', () => {

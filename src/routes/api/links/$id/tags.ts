@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { requireUser } from '../../../../lib/auth/server'
-import { json, readJson } from '../../../../lib/http'
-import { getLink, setLinkTags } from '../../../../lib/links/store'
+import { requireUser } from '#/lib/auth/server'
+import { json, readJson } from '#/lib/http'
+import { getLink, setLinkTags } from '#/lib/links/store'
 
 type Body = {
   tagIds?: string[]

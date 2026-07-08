@@ -1,8 +1,8 @@
 import { useRouter } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { PageHeader } from '../../components/DashboardShell'
-import type { CampaignRow, LinkRow, TagRow } from '../../lib/types'
-import { LinkForm } from './LinkForm'
+import { PageHeader } from '#/components/DashboardShell'
+import type { CampaignRow, LinkRow, TagRow } from '#/lib/types'
+import { LinkForm } from '#/features/dashboard/LinkForm'
 
 export function EditLinkPage({ id }: { id: string }) {
   const router = useRouter()

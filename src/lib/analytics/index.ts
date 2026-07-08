@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
-import { DEFAULT_WORKSPACE_ID } from '../constants'
-import type { CachedLink } from '../types'
+import { DEFAULT_WORKSPACE_ID } from '#/lib/constants'
+import type { CachedLink } from '#/lib/types'
 
 const BOT_PATTERNS = [
   'Googlebot',

@@ -11,7 +11,7 @@ import {
   resolveLink,
   toggleLinkStatus,
   updateLink,
-} from './store'
+} from '#/lib/links/store'
 
 describe('link store', () => {
   beforeEach(() => {

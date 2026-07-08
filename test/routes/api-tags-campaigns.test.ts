@@ -1,25 +1,25 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getCampaignsHandler, postCampaignsHandler } from '../../src/routes/api/campaigns'
+import { getCampaignsHandler, postCampaignsHandler } from '#/routes/api/campaigns'
 import {
   deleteCampaignHandler,
   getCampaignHandler,
   patchCampaignHandler,
-} from '../../src/routes/api/campaigns/$id'
+} from '#/routes/api/campaigns/$id'
 import {
   getLinkCampaignsHandler,
   putLinkCampaignsHandler,
-} from '../../src/routes/api/links/$id/campaigns'
+} from '#/routes/api/links/$id/campaigns'
 import {
   getLinkTagsHandler,
   putLinkTagsHandler,
-} from '../../src/routes/api/links/$id/tags'
-import { getTagsHandler, postTagsHandler } from '../../src/routes/api/tags'
+} from '#/routes/api/links/$id/tags'
+import { getTagsHandler, postTagsHandler } from '#/routes/api/tags'
 import {
   deleteTagHandler,
   getTagHandler,
   patchTagHandler,
-} from '../../src/routes/api/tags/$id'
-import type { CampaignRow, TagRow } from '../../src/lib/types'
+} from '#/routes/api/tags/$id'
+import type { CampaignRow, TagRow } from '#/lib/types'
 import { makeLinkRow } from '../helpers/factories'
 
 const mocks = vi.hoisted(() => ({

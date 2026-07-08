@@ -2,7 +2,7 @@ import {
   DEFAULT_DOMAIN,
   DEFAULT_DOMAIN_ID,
   DEFAULT_WORKSPACE_ID,
-} from '../constants'
+} from '#/lib/constants'
 
 export async function ensureDefaultWorkspace(db: D1Database) {
   const now = new Date().toISOString()

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createD1Mock } from '../../../test/helpers/cloudflare'
-import { ensureDefaultWorkspace } from './seed'
+import { ensureDefaultWorkspace } from '#/lib/db/seed'
 
 describe('ensureDefaultWorkspace', () => {
   it('inserts the default workspace and domain idempotently', async () => {

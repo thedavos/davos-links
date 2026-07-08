@@ -8,9 +8,9 @@ import {
   Settings,
   Tag,
 } from 'lucide-react'
-import { authClient } from '../lib/auth/client'
-import { cn } from '../lib/utils'
-import { Button } from './ui/button'
+import { authClient } from '#/lib/auth/client'
+import { cn } from '#/lib/utils'
+import { Button } from '#/components/ui/button'
 
 const nav = [
   { to: '/dashboard', label: 'Resumen', icon: BarChart3 },

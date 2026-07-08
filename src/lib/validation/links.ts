@@ -1,4 +1,4 @@
-import { RESERVED_PATHS, RESERVED_PREFIXES } from '../constants'
+import { RESERVED_PATHS, RESERVED_PREFIXES } from '#/lib/constants'
 
 export function normalizeShortPath(path: string) {
   return path

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getLinksHandler, postLinksHandler } from '../../src/routes/api/links'
+import { getLinksHandler, postLinksHandler } from '#/routes/api/links'
 import { makeLinkRow } from '../helpers/factories'
 
 const mocks = vi.hoisted(() => ({

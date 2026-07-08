@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { RootDocument } from '../../src/components/RootDocument'
-import { Route as HealthRoute } from '../../src/routes/health'
-import { Route as ShortPathRoute } from '../../src/routes/$shortPath'
+import { RootDocument } from '#/components/RootDocument'
+import { Route as HealthRoute } from '#/routes/health'
+import { Route as ShortPathRoute } from '#/routes/$shortPath'
 
 const mocks = vi.hoisted(() => ({
   handlePublicRedirect: vi.fn(async () => new Response('redirected')),

@@ -16,7 +16,7 @@ vi.mock('../../src/lib/auth/functions', () => ({
 }))
 
 describe('protected route guard', async () => {
-  const { Route } = await import('../../src/routes/_protected')
+  const { Route } = await import('#/routes/_protected')
   const protectedRoute = Route as unknown as {
     beforeLoad: (options: { location: { href: string } }) => Promise<unknown>
   }

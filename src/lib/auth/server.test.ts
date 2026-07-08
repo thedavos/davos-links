@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCloudflareEnv } from '../../../test/mocks/cloudflare-workers'
-import { getAuth, getSession, requireUser } from './server'
+import { getAuth, getSession, requireUser } from '#/lib/auth/server'
 
 const authMocks = vi.hoisted(() => ({
   betterAuth: vi.fn(),

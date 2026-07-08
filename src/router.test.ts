@@ -13,7 +13,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 })
 
 describe('getRouter', async () => {
-  const { getRouter } = await import('./router')
+  const { getRouter } = await import('#/router')
 
   it('creates the TanStack router with route tree and preload defaults', () => {
     const router = getRouter()

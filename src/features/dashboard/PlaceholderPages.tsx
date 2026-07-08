@@ -1,13 +1,13 @@
 import { Archive, Check, Plus, Save } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
-import { PageHeader } from '../../components/DashboardShell'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Input } from '../../components/ui/input'
-import { Label } from '../../components/ui/label'
-import { DEFAULT_DOMAIN } from '../../lib/constants'
-import type { ApiResult, CampaignRow, TagRow } from '../../lib/types'
+import { PageHeader } from '#/components/DashboardShell'
+import { Button } from '#/components/ui/button'
+import { Card } from '#/components/ui/card'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { DEFAULT_DOMAIN } from '#/lib/constants'
+import type { ApiResult, CampaignRow, TagRow } from '#/lib/types'
 
 export function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([])

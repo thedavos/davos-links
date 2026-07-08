@@ -1,4 +1,4 @@
-import type { CachedLink, LinkRow } from '../../src/lib/types'
+import type { CachedLink, LinkRow } from '#/lib/types'
 
 export function makeCachedLink(overrides: Partial<CachedLink> = {}): CachedLink {
   return {

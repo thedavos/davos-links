@@ -1,11 +1,11 @@
-import type { CachedLink } from '../types'
-import { trackClick } from '../analytics'
-import { resolveLink } from '../links/store'
+import type { CachedLink } from '#/lib/types'
+import { trackClick } from '#/lib/analytics/index'
+import { resolveLink } from '#/lib/links/store'
 import {
   isReservedPath,
   mergeQueryParams,
   normalizeShortPath,
-} from '../validation/links'
+} from '#/lib/validation/links'
 
 export async function handlePublicRedirect(request: Request, ctx?: ExecutionContext) {
   const url = new URL(request.url)

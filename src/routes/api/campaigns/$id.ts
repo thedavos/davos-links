@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { requireUser } from '../../../lib/auth/server'
-import { json, readJson } from '../../../lib/http'
-import { deleteCampaign, getCampaign, updateCampaign } from '../../../lib/links/store'
+import { requireUser } from '#/lib/auth/server'
+import { json, readJson } from '#/lib/http'
+import { deleteCampaign, getCampaign, updateCampaign } from '#/lib/links/store'
 
 export async function getCampaignHandler(request: Request, id: string) {
   await requireUser(request.headers)

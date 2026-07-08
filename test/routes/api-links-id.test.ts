@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
-import { analyticsOverviewHandler } from '../../src/routes/api/analytics/overview'
-import { analyticsExportCsvHandler } from '../../src/routes/api/analytics/export[.]csv'
+import { analyticsOverviewHandler } from '#/routes/api/analytics/overview'
+import { analyticsExportCsvHandler } from '#/routes/api/analytics/export[.]csv'
 import {
   deleteLinkHandler,
   getLinkHandler,
   patchLinkHandler,
-} from '../../src/routes/api/links/$id'
-import { archiveLinkHandler } from '../../src/routes/api/links/$id/archive'
-import { disableLinkHandler } from '../../src/routes/api/links/$id/disable'
-import { linkAnalyticsHandler } from '../../src/routes/api/links/$id/analytics'
-import { checkPathHandler } from '../../src/routes/api/links/check-path'
+} from '#/routes/api/links/$id'
+import { archiveLinkHandler } from '#/routes/api/links/$id/archive'
+import { disableLinkHandler } from '#/routes/api/links/$id/disable'
+import { linkAnalyticsHandler } from '#/routes/api/links/$id/analytics'
+import { checkPathHandler } from '#/routes/api/links/check-path'
 import { makeLinkRow } from '../helpers/factories'
 
 const mocks = vi.hoisted(() => ({

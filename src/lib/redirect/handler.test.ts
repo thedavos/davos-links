@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeCachedLink } from '../../../test/helpers/factories'
-import { handlePublicRedirect } from './handler'
+import { handlePublicRedirect } from '#/lib/redirect/handler'
 
 const mocks = vi.hoisted(() => ({
   resolveLink: vi.fn(),

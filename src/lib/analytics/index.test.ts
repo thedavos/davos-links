@@ -9,7 +9,7 @@ import {
   parseUserAgent,
   parseUtmParams,
   trackClick,
-} from './index'
+} from '#/lib/analytics/index'
 
 describe('analytics helpers', () => {
   beforeEach(() => {

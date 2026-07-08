@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { json, readJson } from './http'
+import { json, readJson } from '#/lib/http'
 
 describe('http helpers', () => {
   it('returns JSON with no-store cache control', async () => {

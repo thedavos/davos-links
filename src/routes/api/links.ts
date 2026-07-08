@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json, readJson } from '../../lib/http'
-import { requireUser } from '../../lib/auth/server'
-import { createLink, listLinks } from '../../lib/links/store'
-import type { LinkStatus } from '../../lib/types'
+import { json, readJson } from '#/lib/http'
+import { requireUser } from '#/lib/auth/server'
+import { createLink, listLinks } from '#/lib/links/store'
+import type { LinkStatus } from '#/lib/types'
 
 type CreateLinkBody = {
   title?: string

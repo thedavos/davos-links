@@ -11,12 +11,12 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { PageHeader } from '../../components/DashboardShell'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { ConfirmDialog } from '../../components/ui/dialog'
-import { Input } from '../../components/ui/input'
-import { Select } from '../../components/ui/select'
+import { PageHeader } from '#/components/DashboardShell'
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import { ConfirmDialog } from '#/components/ui/dialog'
+import { Input } from '#/components/ui/input'
+import { Select } from '#/components/ui/select'
 import {
   Table,
   TableBody,
@@ -24,8 +24,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../components/ui/table'
-import type { CampaignRow, LinkRow, TagRow } from '../../lib/types'
+} from '#/components/ui/table'
+import type { CampaignRow, LinkRow, TagRow } from '#/lib/types'
 
 export function LinksPage() {
   const [links, setLinks] = useState<LinkRow[]>([])
