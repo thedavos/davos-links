@@ -1,6 +1,6 @@
 # Davos Links Product
 
-Davos Links is a small, production-quality URL shortener for Davos Software links.
+Davos Links is a small, production-quality URL shortener for davosdo.dev links.
 
 ## Goals
 
