@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Copy, Download, ExternalLink, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { MiniBars } from '#/components/Charts'
+import { ComparisonTrendChart, type ChartPoint } from '#/components/Charts'
 import { PageHeader } from '#/components/DashboardShell'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -16,7 +16,9 @@ import type { LinkRow } from '#/lib/types'
 
 export function LinkDetailPage({ id }: { id: string }) {
   const [link, setLink] = useState<LinkRow | null | undefined>(undefined)
-  const [series, setSeries] = useState<Array<Record<string, string | number>>>([])
+  const [series, setSeries] = useState<ChartPoint[]>([])
+  const [previousSeries, setPreviousSeries] = useState<ChartPoint[]>([])
+  const [comparison, setComparison] = useState<AnalyticsComparison | null>(null)
   const [range, setRange] = useState<DateRange>(() => defaultDateRange(30))
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
@@ -24,6 +26,9 @@ export function LinkDetailPage({ id }: { id: string }) {
   useEffect(() => {
     setLink(undefined)
     setError('')
+    setSeries([])
+    setPreviousSeries([])
+    setComparison(null)
     const params = new URLSearchParams(range)
     void Promise.all([
       fetch(`/api/links/${id}`).then((response) => response.json()),
@@ -34,10 +39,14 @@ export function LinkDetailPage({ id }: { id: string }) {
       .then(([linkData, analyticsData]) => {
         const typedLinkData = linkData as { link?: LinkRow }
         const typedAnalyticsData = analyticsData as {
-          series?: Array<Record<string, string | number>>
+          series?: ChartPoint[]
+          previousSeries?: ChartPoint[]
+          comparison?: AnalyticsComparison
         }
         setLink(typedLinkData.link ?? null)
         setSeries(typedAnalyticsData.series ?? [])
+        setPreviousSeries(typedAnalyticsData.previousSeries ?? [])
+        setComparison(typedAnalyticsData.comparison ?? null)
       })
       .catch(() => {
         setError('No se pudo cargar el enlace.')
@@ -107,10 +116,13 @@ export function LinkDetailPage({ id }: { id: string }) {
       </section>
       <section className="mt-8">
         <div className="mb-3 flex flex-col justify-between gap-3 md:flex-row md:items-center">
-          <h2 className="text-sm font-medium">Clics en el tiempo</h2>
+          <div>
+            <h2 className="text-sm font-medium">Clics en el tiempo</h2>
+            {comparison ? <ComparisonSummary comparison={comparison} /> : null}
+          </div>
           <DateRangePicker onChange={setRange} value={range} />
         </div>
-        <MiniBars data={series} />
+        <ComparisonTrendChart current={series} previous={previousSeries} />
       </section>
       <section className="mt-8 grid gap-4 md:grid-cols-3">
         {['Principales orígenes', 'Países destacados', 'Dispositivos'].map((title) => (
@@ -124,6 +136,31 @@ export function LinkDetailPage({ id }: { id: string }) {
       </section>
     </>
   )
+}
+
+type AnalyticsComparison = {
+  currentClicks: number
+  previousClicks: number
+  delta: number
+  deltaPercent: number
+  trend: 'up' | 'down' | 'flat'
+}
+
+function ComparisonSummary({ comparison }: { comparison: AnalyticsComparison }) {
+  return (
+    <p className="mono mt-1 text-xs text-muted-foreground">
+      {formatSignedNumber(comparison.delta)} clics ·{' '}
+      {formatSignedPercent(comparison.deltaPercent)} vs periodo anterior
+    </p>
+  )
+}
+
+function formatSignedNumber(value: number) {
+  return `${value > 0 ? '+' : ''}${new Intl.NumberFormat('es').format(value)}`
+}
+
+function formatSignedPercent(value: number) {
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`
 }
 
 function AssignmentInfo({

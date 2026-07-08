@@ -136,6 +136,7 @@ export async function getAnalyticsOverview() {
 }
 
 export async function getAnalyticsOverviewForRange(range: DateRange) {
+  const previousRange = previousDateRange(range)
   const { results } = await env.LINKS_DB.prepare(
     `SELECT metric_date, SUM(clicks) AS clicks, SUM(bot_clicks) AS bot_clicks
      FROM daily_link_metrics
@@ -144,7 +145,17 @@ export async function getAnalyticsOverviewForRange(range: DateRange) {
      ORDER BY metric_date ASC`,
   )
     .bind(DEFAULT_WORKSPACE_ID, range.from, range.to)
-    .all<{ metric_date: string; clicks: number; bot_clicks: number }>()
+    .all<AnalyticsPoint>()
+
+  const { results: previousResults } = await env.LINKS_DB.prepare(
+    `SELECT metric_date, SUM(clicks) AS clicks, SUM(bot_clicks) AS bot_clicks
+     FROM daily_link_metrics
+     WHERE workspace_id = ? AND metric_date BETWEEN ? AND ?
+     GROUP BY metric_date
+     ORDER BY metric_date ASC`,
+  )
+    .bind(DEFAULT_WORKSPACE_ID, previousRange.from, previousRange.to)
+    .all<AnalyticsPoint>()
 
   const totals = await env.LINKS_DB.prepare(
     `SELECT
@@ -164,6 +175,9 @@ export async function getAnalyticsOverviewForRange(range: DateRange) {
     .bind(DEFAULT_WORKSPACE_ID)
     .first<{ active_links: number }>()
 
+  const series = normalizeSeries(results, range)
+  const previousSeries = normalizeSeries(previousResults, previousRange)
+
   return {
     totals: {
       totalClicks: totals?.total_clicks ?? 0,
@@ -171,12 +185,17 @@ export async function getAnalyticsOverviewForRange(range: DateRange) {
       clicks30d: totals?.clicks_30d ?? 0,
       activeLinks: activeLinks?.active_links ?? 0,
     },
-    series: results,
+    series,
+    previousSeries,
+    comparison: compareSeries(series, previousSeries),
+    heatmap: series,
     range,
+    previousRange,
   }
 }
 
 export async function getLinkAnalytics(linkId: string, range = defaultRange()) {
+  const previousRange = previousDateRange(range)
   const { results } = await env.LINKS_DB.prepare(
     `SELECT metric_date, clicks, bot_clicks
      FROM daily_link_metrics
@@ -187,9 +206,30 @@ export async function getLinkAnalytics(linkId: string, range = defaultRange()) {
      LIMIT 366`,
   )
     .bind(DEFAULT_WORKSPACE_ID, linkId, range.from, range.to)
-    .all<{ metric_date: string; clicks: number; bot_clicks: number }>()
+    .all<AnalyticsPoint>()
 
-  return { series: results, range }
+  const { results: previousResults } = await env.LINKS_DB.prepare(
+    `SELECT metric_date, clicks, bot_clicks
+     FROM daily_link_metrics
+     WHERE workspace_id = ?
+       AND link_id = ?
+       AND metric_date BETWEEN ? AND ?
+     ORDER BY metric_date ASC
+     LIMIT 366`,
+  )
+    .bind(DEFAULT_WORKSPACE_ID, linkId, previousRange.from, previousRange.to)
+    .all<AnalyticsPoint>()
+
+  const series = normalizeSeries(results, range)
+  const previousSeries = normalizeSeries(previousResults, previousRange)
+
+  return {
+    series,
+    previousSeries,
+    comparison: compareSeries(series, previousSeries),
+    range,
+    previousRange,
+  }
 }
 
 export async function exportMetricsCsv(range: DateRange, linkId?: string | null) {
@@ -259,6 +299,20 @@ export type DateRange = {
   to: string
 }
 
+export type AnalyticsPoint = {
+  metric_date: string
+  clicks: number
+  bot_clicks?: number
+}
+
+export type AnalyticsComparison = {
+  currentClicks: number
+  previousClicks: number
+  delta: number
+  deltaPercent: number
+  trend: 'up' | 'down' | 'flat'
+}
+
 export function parseDateRange(url: URL): DateRange {
   const fallback = defaultRange()
   const range = {
@@ -273,6 +327,72 @@ function defaultRange(): DateRange {
   const from = new Date(to)
   from.setUTCDate(from.getUTCDate() - 29)
   return { from: toDateString(from), to: toDateString(to) }
+}
+
+function previousDateRange(range: DateRange): DateRange {
+  const from = parseDateString(range.from)
+  const to = parseDateString(range.to)
+  const days = Math.max(1, differenceInDays(from, to) + 1)
+  const previousTo = addDays(from, -1)
+  const previousFrom = addDays(previousTo, -(days - 1))
+  return { from: toDateString(previousFrom), to: toDateString(previousTo) }
+}
+
+function normalizeSeries(points: AnalyticsPoint[], range: DateRange) {
+  const byDate = new Map(points.map((point) => [point.metric_date, point]))
+  return eachDate(range).map((metric_date) => {
+    const point = byDate.get(metric_date)
+    return {
+      metric_date,
+      clicks: Number(point?.clicks ?? 0),
+      bot_clicks: Number(point?.bot_clicks ?? 0),
+    }
+  })
+}
+
+function compareSeries(
+  series: AnalyticsPoint[],
+  previousSeries: AnalyticsPoint[],
+): AnalyticsComparison {
+  const currentClicks = sumClicks(series)
+  const previousClicks = sumClicks(previousSeries)
+  const delta = currentClicks - previousClicks
+  const deltaPercent =
+    previousClicks === 0 ? (currentClicks > 0 ? 100 : 0) : (delta / previousClicks) * 100
+  const trend = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
+
+  return { currentClicks, previousClicks, delta, deltaPercent, trend }
+}
+
+function sumClicks(points: AnalyticsPoint[]) {
+  return points.reduce((total, point) => total + Number(point.clicks ?? 0), 0)
+}
+
+function eachDate(range: DateRange) {
+  const dates: string[] = []
+  const current = parseDateString(range.from)
+  const end = parseDateString(range.to)
+
+  while (current <= end) {
+    dates.push(toDateString(current))
+    current.setUTCDate(current.getUTCDate() + 1)
+  }
+
+  return dates
+}
+
+function parseDateString(value: string) {
+  return new Date(`${value}T00:00:00.000Z`)
+}
+
+function addDays(date: Date, days: number) {
+  const copy = new Date(date)
+  copy.setUTCDate(copy.getUTCDate() + days)
+  return copy
+}
+
+function differenceInDays(from: Date, to: Date) {
+  return Math.round((to.getTime() - from.getTime()) / 86_400_000)
 }
 
 function validDate(value: string | null) {

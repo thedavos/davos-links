@@ -7,7 +7,12 @@ import {
 } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MiniBars } from '#/components/Charts'
+import {
+  ActivityHeatmap,
+  ComparisonTrendChart,
+  MetricSparkline,
+  MiniBars,
+} from '#/components/Charts'
 import { DashboardShell, PageHeader } from '#/components/DashboardShell'
 import { LoginPage } from '#/features/auth/LoginPage'
 import { HomePage } from '#/features/home/HomePage'
@@ -114,6 +119,38 @@ describe('public and shared UI', () => {
     expect(screen.getByTitle('1')).toHaveStyle({ height: '50%' })
     rerender(<MiniBars data={[{ clicks: 5 }, { clicks: 10 }]} />)
     expect(screen.getByTitle('10')).toBeInTheDocument()
+
+    rerender(<MetricSparkline data={[]} label="Sparkline vacía" />)
+    expect(screen.getByText('Sin datos')).toBeInTheDocument()
+
+    rerender(
+      <ComparisonTrendChart
+        current={[
+          { metric_date: '2026-07-06', clicks: 5 },
+          { metric_date: '2026-07-07', clicks: 10 },
+        ]}
+        previous={[
+          { metric_date: '2026-06-29', clicks: 3 },
+          { metric_date: '2026-06-30', clicks: 4 },
+        ]}
+      />,
+    )
+    expect(screen.getByText('Periodo anterior')).toBeInTheDocument()
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /07 jul.*10 clics/i }))
+    expect(screen.getByText('Anterior')).toBeInTheDocument()
+    expect(screen.getByText('Delta')).toBeInTheDocument()
+
+    rerender(
+      <ActivityHeatmap
+        data={[
+          { metric_date: '2026-07-06', clicks: 0 },
+          { metric_date: '2026-07-07', clicks: 8 },
+        ]}
+      />,
+    )
+    expect(screen.getByText('Actividad diaria')).toBeInTheDocument()
+    fireEvent.focus(screen.getByRole('button', { name: /07 jul.*8 clics/i }))
+    expect(screen.getByText('Actual')).toBeInTheDocument()
   })
 
   it('renders dashboard shell, header, and signs out', async () => {
@@ -189,7 +226,7 @@ describe('dashboard pages', () => {
     render(<OverviewPage />)
     expect(await screen.findByText('Clics totales')).toBeInTheDocument()
     expect(await screen.findByText('/railway')).toBeInTheDocument()
-    expect(screen.getByText('12')).toBeInTheDocument()
+    expect(screen.getAllByText('12').length).toBeGreaterThan(0)
   })
 
   it('renders links table and action buttons', async () => {

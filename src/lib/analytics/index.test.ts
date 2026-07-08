@@ -115,20 +115,57 @@ describe('analytics helpers', () => {
     installCloudflareMocks({
       dbResults: [
         [{ metric_date: '2026-07-07', clicks: 3, bot_clicks: 1 }],
+        [{ metric_date: '2026-06-07', clicks: 2, bot_clicks: 0 }],
         { total_clicks: 10, clicks_7d: 7, clicks_30d: 9 },
         { active_links: 4 },
         [{ metric_date: '2026-07-07', clicks: 2, bot_clicks: 0 }],
+        [{ metric_date: '2026-06-07', clicks: 5, bot_clicks: 1 }],
       ],
     })
 
-    await expect(getAnalyticsOverview()).resolves.toEqual({
+    const overview = await getAnalyticsOverview()
+    expect(overview).toMatchObject({
       totals: { totalClicks: 10, clicks7d: 7, clicks30d: 9, activeLinks: 4 },
-      series: [{ metric_date: '2026-07-07', clicks: 3, bot_clicks: 1 }],
+      comparison: {
+        currentClicks: 3,
+        previousClicks: 2,
+        delta: 1,
+        trend: 'up',
+      },
       range: { from: '2026-06-08', to: '2026-07-07' },
+      previousRange: { from: '2026-05-09', to: '2026-06-07' },
     })
-    await expect(getLinkAnalytics('lnk_test')).resolves.toEqual({
-      series: [{ metric_date: '2026-07-07', clicks: 2, bot_clicks: 0 }],
+    expect(overview.series).toHaveLength(30)
+    expect(overview.previousSeries).toHaveLength(30)
+    expect(overview.heatmap).toBe(overview.series)
+    expect(overview.series[0]).toEqual({
+      metric_date: '2026-06-08',
+      clicks: 0,
+      bot_clicks: 0,
+    })
+    expect(overview.series.at(-1)).toEqual({
+      metric_date: '2026-07-07',
+      clicks: 3,
+      bot_clicks: 1,
+    })
+
+    const linkAnalytics = await getLinkAnalytics('lnk_test')
+    expect(linkAnalytics).toMatchObject({
+      comparison: {
+        currentClicks: 2,
+        previousClicks: 5,
+        delta: -3,
+        deltaPercent: -60,
+        trend: 'down',
+      },
       range: { from: '2026-06-08', to: '2026-07-07' },
+      previousRange: { from: '2026-05-09', to: '2026-06-07' },
+    })
+    expect(linkAnalytics.series).toHaveLength(30)
+    expect(linkAnalytics.series.at(-1)).toEqual({
+      metric_date: '2026-07-07',
+      clicks: 2,
+      bot_clicks: 0,
     })
   })
 })
