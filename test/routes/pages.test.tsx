@@ -160,6 +160,7 @@ describe('public and shared UI', () => {
       'bg-background',
       'border-border',
     )
+    expect(screen.getByRole('link', { name: 'Resumen' })).not.toHaveClass('shadow-sm')
     expect(screen.getByTestId('outlet')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /cerrar sesión/i }))
     await waitFor(() => expect(authMocks.signOut).toHaveBeenCalled())
@@ -248,9 +249,32 @@ describe('dashboard pages', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       'https://links.davosdo.dev/railway',
     )
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Enlace copiado: railway.',
+    )
+    expect(screen.getByTitle('Copiado')).toBeInTheDocument()
+
     fireEvent.click(screen.getByTitle('Pausar'))
+    fireEvent.click(screen.getByText('Pausar'))
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith('/api/links/lnk_test/disable', {
+        method: 'POST',
+      }),
+    )
+    expect(await screen.findByText('inactive')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Enlace pausado: Railway.')
+
     fireEvent.click(screen.getByTitle('Archivar'))
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3))
+    fireEvent.click(screen.getByText('Archivar'))
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith('/api/links/lnk_test/archive', {
+        method: 'POST',
+      }),
+    )
+    expect(await screen.findByText('archived')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Enlace archivado: Railway.',
+    )
   })
 
   it('renders links empty state', async () => {

@@ -35,7 +35,7 @@ export function DashboardShell({ userName }: { userName: string }) {
             <Link
               activeOptions={{ exact: item.to === '/dashboard' }}
               activeProps={{
-                className: 'border-border bg-background text-foreground shadow-sm',
+                className: 'border-border bg-background text-foreground',
               }}
               className="flex items-center gap-3 border border-transparent px-3 py-2 text-sm text-muted-foreground hover:bg-background hover:text-foreground"
               key={item.to}

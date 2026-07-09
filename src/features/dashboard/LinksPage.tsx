@@ -15,6 +15,7 @@ import { PageHeader } from '#/components/DashboardShell'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { ConfirmDialog } from '#/components/ui/dialog'
+import { InlineFeedback, type ActionFeedback } from '#/components/ui/feedback'
 import { Input } from '#/components/ui/input'
 import { Select } from '#/components/ui/select'
 import {
@@ -25,7 +26,45 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import type { CampaignRow, LinkRow, TagRow } from '#/lib/types'
+import { PUBLIC_ORIGIN } from '#/lib/constants'
+import type { CampaignRow, LinkRow, LinkStatus, TagRow } from '#/lib/types'
+
+type ConfirmedLinkAction = {
+  id: string
+  title: string
+  type: LinkMutationAction
+}
+
+type LinkMutationAction = 'pause' | 'archive'
+
+const confirmedActionConfig: Record<
+  LinkMutationAction,
+  {
+    confirmLabel: string
+    endpointSuffix: string
+    errorMessage: string
+    nextStatus: LinkStatus
+    successMessage: (title: string) => string
+    title: string
+  }
+> = {
+  archive: {
+    confirmLabel: 'Archivar',
+    endpointSuffix: 'archive',
+    errorMessage: 'No se pudo archivar el enlace.',
+    nextStatus: 'archived',
+    successMessage: (title) => `Enlace archivado: ${title}.`,
+    title: 'Archivar enlace',
+  },
+  pause: {
+    confirmLabel: 'Pausar',
+    endpointSuffix: 'disable',
+    errorMessage: 'No se pudo pausar el enlace.',
+    nextStatus: 'inactive',
+    successMessage: (title) => `Enlace pausado: ${title}.`,
+    title: 'Pausar enlace',
+  },
+}
 
 export function LinksPage() {
   const [links, setLinks] = useState<LinkRow[]>([])
@@ -37,12 +76,8 @@ export function LinksPage() {
   const [campaignId, setCampaignId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [copiedId, setCopiedId] = useState('')
-  const [confirmAction, setConfirmAction] = useState<{
-    id: string
-    title: string
-    type: 'pause' | 'archive'
-  } | null>(null)
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null)
+  const [confirmAction, setConfirmAction] = useState<ConfirmedLinkAction | null>(null)
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -60,6 +95,12 @@ export function LinksPage() {
       setCampaigns((campaignsData as { campaigns?: CampaignRow[] }).campaigns ?? [])
     })
   }, [])
+
+  useEffect(() => {
+    if (!actionFeedback) return
+    const timeout = window.setTimeout(() => setActionFeedback(null), 2200)
+    return () => window.clearTimeout(timeout)
+  }, [actionFeedback])
 
   async function loadLinks() {
     setLoading(true)
@@ -81,25 +122,37 @@ export function LinksPage() {
   }
 
   async function copyLink(link: LinkRow) {
-    await navigator.clipboard.writeText(`https://links.davosdo.dev/${link.short_path}`)
-    setCopiedId(link.id)
-    window.setTimeout(() => setCopiedId((current) => (current === link.id ? '' : current)), 1500)
+    try {
+      await navigator.clipboard.writeText(`${PUBLIC_ORIGIN}/${link.short_path}`)
+      setActionFeedback({
+        action: 'copy',
+        kind: 'success',
+        message: `Enlace copiado: ${link.short_path}.`,
+        targetId: link.id,
+      })
+    } catch {
+      setActionFeedback({
+        action: 'copy',
+        kind: 'error',
+        message: 'No se pudo copiar el enlace.',
+        targetId: link.id,
+      })
+    }
   }
 
   async function runConfirmedAction() {
     if (!confirmAction) return
-    const endpoint =
-      confirmAction.type === 'pause'
-        ? `/api/links/${confirmAction.id}/disable`
-        : `/api/links/${confirmAction.id}/archive`
-    const nextStatus = confirmAction.type === 'pause' ? 'inactive' : 'archived'
+    const action = confirmAction
     setConfirmAction(null)
-    await fetch(endpoint, { method: 'POST' })
-    setLinks((current) =>
-      current.map((item) =>
-        item.id === confirmAction.id ? { ...item, status: nextStatus } : item,
-      ),
-    )
+    try {
+      await requestConfirmedLinkAction(action)
+      setLinks((current) =>
+        applyConfirmedLinkAction(current, action),
+      )
+      setActionFeedback(createConfirmedActionFeedback(action, 'success'))
+    } catch {
+      setActionFeedback(createConfirmedActionFeedback(action, 'error'))
+    }
   }
 
   return (
@@ -170,6 +223,7 @@ export function LinksPage() {
           {error}
         </p>
       ) : null}
+      {actionFeedback ? <InlineFeedback className="mb-4" feedback={actionFeedback} /> : null}
       <Table>
         <TableHeader>
           <TableRow>
@@ -216,7 +270,16 @@ export function LinksPage() {
                 <TableCell>{link.clicks ?? 0}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    <IconButton label={copiedId === link.id ? 'Copiado' : 'Copiar'} onClick={() => copyLink(link)}>
+                    <IconButton
+                      label={
+                        actionFeedback?.action === 'copy' &&
+                        actionFeedback.kind === 'success' &&
+                        actionFeedback.targetId === link.id
+                          ? 'Copiado'
+                          : 'Copiar'
+                      }
+                      onClick={() => copyLink(link)}
+                    >
                       <Copy size={15} />
                     </IconButton>
                     <Button asChild size="icon" title="Abrir" variant="outline">
@@ -273,14 +336,10 @@ export function LinksPage() {
       </Table>
       {confirmAction ? (
         <ConfirmDialog
-          confirmLabel={confirmAction.type === 'pause' ? 'Pausar' : 'Archivar'}
+          confirmLabel={confirmedActionConfig[confirmAction.type].confirmLabel}
           onCancel={() => setConfirmAction(null)}
           onConfirm={runConfirmedAction}
-          title={
-            confirmAction.type === 'pause'
-              ? 'Pausar enlace'
-              : 'Archivar enlace'
-          }
+          title={confirmedActionConfig[confirmAction.type].title}
         >
           {confirmAction.type === 'pause'
             ? `El enlace ${confirmAction.title} dejará de redirigir como activo.`
@@ -289,6 +348,43 @@ export function LinksPage() {
       ) : null}
     </>
   )
+}
+
+async function requestConfirmedLinkAction(action: ConfirmedLinkAction) {
+  const config = confirmedActionConfig[action.type]
+  const response = await fetch(`/api/links/${action.id}/${config.endpointSuffix}`, {
+    method: 'POST',
+  })
+  const result = (await response.json().catch(() => ({}))) as { error?: string }
+  if (!response.ok || result.error) {
+    throw new Error(result.error)
+  }
+}
+
+function applyConfirmedLinkAction(
+  links: LinkRow[],
+  action: ConfirmedLinkAction,
+) {
+  const nextStatus = confirmedActionConfig[action.type].nextStatus
+  return links.map((link) =>
+    link.id === action.id ? { ...link, status: nextStatus } : link,
+  )
+}
+
+function createConfirmedActionFeedback(
+  action: ConfirmedLinkAction,
+  kind: ActionFeedback['kind'],
+): ActionFeedback {
+  const config = confirmedActionConfig[action.type]
+  return {
+    action: action.type,
+    kind,
+    message:
+      kind === 'success'
+        ? config.successMessage(action.title)
+        : config.errorMessage,
+    targetId: action.id,
+  }
 }
 
 function BadgeList({
