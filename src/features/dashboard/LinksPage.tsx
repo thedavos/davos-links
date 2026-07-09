@@ -15,7 +15,7 @@ import { PageHeader } from '#/components/DashboardShell'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { ConfirmDialog } from '#/components/ui/dialog'
-import { InlineFeedback, type ActionFeedback } from '#/components/ui/feedback'
+import { ActionNotification, type ActionFeedback } from '#/components/ui/feedback'
 import { Input } from '#/components/ui/input'
 import { Select } from '#/components/ui/select'
 import {
@@ -223,7 +223,7 @@ export function LinksPage() {
           {error}
         </p>
       ) : null}
-      {actionFeedback ? <InlineFeedback className="mb-4" feedback={actionFeedback} /> : null}
+      {actionFeedback ? <ActionNotification feedback={actionFeedback} /> : null}
       <Table>
         <TableHeader>
           <TableRow>

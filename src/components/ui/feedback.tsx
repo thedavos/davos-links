@@ -8,7 +8,7 @@ export type ActionFeedback = {
   targetId?: string
 }
 
-export function InlineFeedback({
+export function ActionNotification({
   className,
   feedback,
 }: {
@@ -18,9 +18,9 @@ export function InlineFeedback({
   return (
     <p
       className={cn(
-        'border px-3 py-2 text-sm',
+        'fixed right-4 top-4 z-50 w-[min(360px,calc(100vw-2rem))] border bg-background px-3 py-2 text-sm shadow-sm',
         feedback.kind === 'success'
-          ? 'border-border bg-muted/40 text-muted-foreground'
+          ? 'border-border text-muted-foreground'
           : 'border-destructive text-destructive',
         className,
       )}

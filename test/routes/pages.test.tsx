@@ -249,9 +249,9 @@ describe('dashboard pages', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       'https://links.davosdo.dev/railway',
     )
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Enlace copiado: railway.',
-    )
+    const notification = await screen.findByRole('status')
+    expect(notification).toHaveTextContent('Enlace copiado: railway.')
+    expect(notification).toHaveClass('fixed', 'right-4', 'top-4', 'z-50')
     expect(screen.getByTitle('Copiado')).toBeInTheDocument()
 
     fireEvent.click(screen.getByTitle('Pausar'))
