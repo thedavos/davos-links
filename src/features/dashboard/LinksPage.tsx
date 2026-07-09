@@ -42,26 +42,26 @@ const confirmedActionConfig: Record<
   {
     confirmLabel: string
     endpointSuffix: string
-    errorMessage: string
+    errorTitle: string
     nextStatus: LinkStatus
-    successMessage: (title: string) => string
+    successTitle: string
     title: string
   }
 > = {
   archive: {
     confirmLabel: 'Archivar',
     endpointSuffix: 'archive',
-    errorMessage: 'No se pudo archivar el enlace.',
+    errorTitle: 'No se pudo archivar el enlace',
     nextStatus: 'archived',
-    successMessage: (title) => `Enlace archivado: ${title}.`,
+    successTitle: 'Enlace archivado',
     title: 'Archivar enlace',
   },
   pause: {
     confirmLabel: 'Pausar',
     endpointSuffix: 'disable',
-    errorMessage: 'No se pudo pausar el enlace.',
+    errorTitle: 'No se pudo pausar el enlace',
     nextStatus: 'inactive',
-    successMessage: (title) => `Enlace pausado: ${title}.`,
+    successTitle: 'Enlace pausado',
     title: 'Pausar enlace',
   },
 }
@@ -126,16 +126,18 @@ export function LinksPage() {
       await navigator.clipboard.writeText(`${PUBLIC_ORIGIN}/${link.short_path}`)
       setActionFeedback({
         action: 'copy',
+        detail: `links.davosdo.dev/${link.short_path}`,
         kind: 'success',
-        message: `Enlace copiado: ${link.short_path}.`,
         targetId: link.id,
+        title: 'Enlace copiado',
       })
     } catch {
       setActionFeedback({
         action: 'copy',
+        detail: 'La URL no se añadió al portapapeles.',
         kind: 'error',
-        message: 'No se pudo copiar el enlace.',
         targetId: link.id,
+        title: 'No se pudo copiar el enlace',
       })
     }
   }
@@ -223,7 +225,12 @@ export function LinksPage() {
           {error}
         </p>
       ) : null}
-      {actionFeedback ? <ActionNotification feedback={actionFeedback} /> : null}
+      {actionFeedback ? (
+        <ActionNotification
+          feedback={actionFeedback}
+          onDismiss={() => setActionFeedback(null)}
+        />
+      ) : null}
       <Table>
         <TableHeader>
           <TableRow>
@@ -378,12 +385,10 @@ function createConfirmedActionFeedback(
   const config = confirmedActionConfig[action.type]
   return {
     action: action.type,
+    detail: action.title,
     kind,
-    message:
-      kind === 'success'
-        ? config.successMessage(action.title)
-        : config.errorMessage,
     targetId: action.id,
+    title: kind === 'success' ? config.successTitle : config.errorTitle,
   }
 }
 

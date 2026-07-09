@@ -14,6 +14,7 @@ import {
   MiniBars,
 } from '#/components/Charts'
 import { DashboardShell, PageHeader } from '#/components/DashboardShell'
+import { ActionNotification } from '#/components/ui/feedback'
 import { LoginPage } from '#/features/auth/LoginPage'
 import { HomePage } from '#/features/home/HomePage'
 import { LinkDetailPage } from '#/features/dashboard/LinkDetailPage'
@@ -250,8 +251,10 @@ describe('dashboard pages', () => {
       'https://links.davosdo.dev/railway',
     )
     const notification = await screen.findByRole('status')
-    expect(notification).toHaveTextContent('Enlace copiado: railway.')
+    expect(notification).toHaveTextContent('Enlace copiado')
+    expect(notification).toHaveTextContent('links.davosdo.dev/railway')
     expect(notification).toHaveClass('fixed', 'right-4', 'top-4', 'z-50')
+    expect(screen.getByRole('button', { name: 'Cerrar notificación' })).toBeInTheDocument()
     expect(screen.getByTitle('Copiado')).toBeInTheDocument()
 
     fireEvent.click(screen.getByTitle('Pausar'))
@@ -262,7 +265,8 @@ describe('dashboard pages', () => {
       }),
     )
     expect(await screen.findByText('inactive')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Enlace pausado: Railway.')
+    expect(screen.getByRole('status')).toHaveTextContent('Enlace pausado')
+    expect(screen.getByRole('status')).toHaveTextContent('Railway')
 
     fireEvent.click(screen.getByTitle('Archivar'))
     fireEvent.click(screen.getByText('Archivar'))
@@ -272,9 +276,30 @@ describe('dashboard pages', () => {
       }),
     )
     expect(await screen.findByText('archived')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Enlace archivado: Railway.',
+    expect(screen.getByRole('status')).toHaveTextContent('Enlace archivado')
+    expect(screen.getByRole('status')).toHaveTextContent('Railway')
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar notificación' }))
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+  })
+
+  it('renders an accessible error notification', () => {
+    render(
+      <ActionNotification
+        feedback={{
+          action: 'copy',
+          detail: 'La URL no se añadió al portapapeles.',
+          kind: 'error',
+          title: 'No se pudo copiar el enlace',
+        }}
+        onDismiss={vi.fn()}
+      />,
     )
+
+    expect(screen.getByRole('alert')).toHaveTextContent('No se pudo copiar el enlace')
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'La URL no se añadió al portapapeles.',
+    )
+    expect(screen.getByRole('button', { name: 'Cerrar notificación' })).toBeInTheDocument()
   })
 
   it('renders links empty state', async () => {
