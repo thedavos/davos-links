@@ -8,12 +8,13 @@ import {
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  ActivityHeatmap,
   ComparisonTrendChart,
+  DailyActivityBarChart,
   MetricSparkline,
-  MiniBars,
 } from '#/components/Charts'
 import { DashboardShell, PageHeader } from '#/components/DashboardShell'
+import { DitherAvatar } from '#/components/dither-kit'
+import { Button } from '#/components/ui/button'
 import { ActionNotification } from '#/components/ui/feedback'
 import { LoginPage } from '#/features/auth/LoginPage'
 import { HomePage } from '#/features/home/HomePage'
@@ -110,18 +111,12 @@ describe('public and shared UI', () => {
 
   it('renders the public home and shared chart states', () => {
     render(<HomePage />)
-    expect(screen.getByRole('heading', { name: 'Davos Links' })).toBeInTheDocument()
-    expect(screen.getByText('links.davosdo.dev/demo')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /Enlaces breves.*Resultados claros/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('links.davosdo.dev')).toBeInTheDocument()
 
-    const { rerender } = render(<MiniBars data={[]} />)
-    expect(screen.getByText('Todavía no hay datos')).toBeInTheDocument()
-    rerender(<MiniBars data={[{ clicks: 1 }]} />)
-    expect(screen.getByTitle('1')).toHaveClass('w-2')
-    expect(screen.getByTitle('1')).toHaveStyle({ height: '50%' })
-    rerender(<MiniBars data={[{ clicks: 5 }, { clicks: 10 }]} />)
-    expect(screen.getByTitle('10')).toBeInTheDocument()
-
-    rerender(<MetricSparkline data={[]} label="Sparkline vacía" />)
+    const { rerender } = render(<MetricSparkline data={[]} label="Sparkline vacía" />)
     expect(screen.getByText('Sin datos')).toBeInTheDocument()
 
     rerender(
@@ -137,33 +132,128 @@ describe('public and shared UI', () => {
       />,
     )
     expect(screen.getByText('Periodo anterior')).toBeInTheDocument()
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /07 jul.*10 clics/i }))
-    expect(screen.getByText('Anterior')).toBeInTheDocument()
-    expect(screen.getByText('Delta')).toBeInTheDocument()
+    const currentLegend = screen.getByRole('button', { name: 'Actual' })
+    expect(currentLegend).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(currentLegend)
+    expect(currentLegend).toHaveAttribute('aria-pressed', 'true')
+    const comparison = screen.getByRole('group', {
+      name: /Clics en el tiempo comparados/i,
+    })
+    fireEvent.focus(comparison)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /07 jul.*10 clics actuales.*4 del periodo anterior/i,
+    )
+    fireEvent.keyDown(comparison, { key: 'Home' })
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /06 jul.*5 clics actuales.*3 del periodo anterior/i,
+    )
+    fireEvent.keyDown(comparison, { key: 'Escape' })
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
 
     rerender(
-      <ActivityHeatmap
+      <DailyActivityBarChart
         data={[
           { metric_date: '2026-07-06', clicks: 0 },
           { metric_date: '2026-07-07', clicks: 8 },
         ]}
       />,
     )
-    expect(screen.getByText('Actividad diaria')).toBeInTheDocument()
-    fireEvent.focus(screen.getByRole('button', { name: /07 jul.*8 clics/i }))
-    expect(screen.getByText('Actual')).toBeInTheDocument()
+    expect(screen.getByText('Una barra por fecha')).toBeInTheDocument()
+    const activity = screen.getByRole('group', { name: 'Actividad diaria de clics' })
+    fireEvent.focus(activity)
+    expect(screen.getByRole('status')).toHaveTextContent(/07 jul.*8 clics/i)
+    fireEvent.keyDown(activity, { key: 'ArrowLeft' })
+    expect(screen.getByRole('status')).toHaveTextContent(/06 jul.*0 clics/i)
+  })
+
+  it.each([1, 7, 30, 90])(
+    'keeps %i daily points keyboard-accessible with at most eight date labels',
+    (days) => {
+      const data = Array.from({ length: days }, (_, index) => ({
+        clicks: index,
+        metric_date: new Date(Date.UTC(2026, 0, index + 1)).toISOString().slice(0, 10),
+      }))
+      const { container } = render(<DailyActivityBarChart data={data} />)
+      const chart = screen.getByRole('group', { name: 'Actividad diaria de clics' })
+
+      fireEvent.focus(chart)
+      fireEvent.keyDown(chart, { key: 'Home' })
+      expect(screen.getByRole('status')).toHaveTextContent(/01 ene.*0 clics/i)
+      fireEvent.keyDown(chart, { key: 'End' })
+      expect(screen.getByRole('status')).toHaveTextContent(
+        new RegExp(`${days - 1} clics`, 'i'),
+      )
+      expect(
+        container.querySelectorAll('text[dominant-baseline="hanging"]').length,
+      ).toBeLessThanOrEqual(8)
+    },
+  )
+
+  it('renders empty analytical charts without focusable chart shells', () => {
+    const { rerender } = render(<ComparisonTrendChart current={[]} />)
+    expect(screen.getByText('Todavía no hay datos')).toBeInTheDocument()
+    expect(screen.queryByRole('group')).not.toBeInTheDocument()
+
+    rerender(<DailyActivityBarChart data={[]} />)
+    expect(screen.getByText('Todavía no hay datos')).toBeInTheDocument()
+    expect(screen.queryByRole('group')).not.toBeInTheDocument()
+  })
+
+  it('preserves native button semantics and deterministic avatar identity', () => {
+    render(
+      <>
+        <Button type="submit">Guardar</Button>
+        <Button disabled>Deshabilitado</Button>
+        <Button asChild>
+          <a href="/destino">Abrir enlace</a>
+        </Button>
+        <Button asChild disabled>
+          <a href="/bloqueado">Enlace bloqueado</a>
+        </Button>
+        <Button aria-label="Acción rápida" size="icon" variant="ghost">
+          +
+        </Button>
+        <Button variant="destructive">Eliminar</Button>
+        <Button variant="outline">Acción secundaria</Button>
+        <DitherAvatar ariaLabel="Avatar de Ada" animate={false} name="Ada" />
+      </>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Guardar' })).toHaveAttribute(
+      'type',
+      'submit',
+    )
+    expect(screen.getByRole('button', { name: 'Deshabilitado' })).toBeDisabled()
+    expect(screen.getByRole('link', { name: 'Abrir enlace' })).toHaveAttribute(
+      'href',
+      '/destino',
+    )
+    const disabledLink = screen.getByRole('link', { name: 'Enlace bloqueado' })
+    expect(disabledLink).toHaveAttribute('aria-disabled', 'true')
+    expect(disabledLink).toHaveAttribute('tabindex', '-1')
+    fireEvent.click(disabledLink)
+    expect(routerMocks.navigate).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Acción rápida' })).toHaveClass(
+      'bg-transparent',
+    )
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toHaveClass('text-red-950')
+    expect(
+      screen
+        .getByRole('button', { name: 'Acción secundaria' })
+        .querySelector('canvas[data-dither-variant="dotted-subtle"]'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Avatar de Ada' })).toBeInTheDocument()
   })
 
   it('renders dashboard shell, header, and signs out', async () => {
     render(<DashboardShell userName="Ada" />)
     expect(screen.getByText('Ada')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Resumen' })).toHaveClass(
-      'bg-background',
-      'border-border',
-    )
-    expect(screen.getByRole('link', { name: 'Resumen' })).not.toHaveClass('shadow-sm')
+    const overviewLinks = screen.getAllByRole('link', { name: 'Resumen' })
+    expect(overviewLinks).toHaveLength(2)
+    expect(overviewLinks[0]).toHaveClass('bg-secondary')
+    expect(screen.getByRole('navigation', { name: 'Navegación móvil' })).toBeInTheDocument()
     expect(screen.getByTestId('outlet')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión/i }))
+    fireEvent.click(screen.getAllByRole('button', { name: /cerrar sesión/i })[0])
     await waitFor(() => expect(authMocks.signOut).toHaveBeenCalled())
     expect(routerMocks.navigate).toHaveBeenCalledWith({ to: '/login' })
 
