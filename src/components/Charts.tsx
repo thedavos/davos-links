@@ -3,9 +3,10 @@ import {
   ActiveDot,
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   Grid,
   Legend,
-  Line,
   Tooltip,
   XAxis,
   YAxis,
@@ -34,7 +35,7 @@ type ComparisonRow = {
 
 const comparisonConfig = {
   current: { label: 'Periodo seleccionado', color: 'blue' },
-  previous: { label: 'Periodo anterior', color: 'purple' },
+  previous: { label: 'Periodo anterior', color: 'coral' },
 } as const
 
 const currentConfig = {
@@ -42,6 +43,49 @@ const currentConfig = {
 } as const
 
 type ChartView = 'current' | 'comparison'
+type ChartDisplay = 'trend' | 'daily'
+
+const chartDisplayOptions: readonly SegmentedControlOption<ChartDisplay>[] = [
+  {
+    value: 'trend',
+    label: 'Tendencia',
+    ariaLabel: 'Mostrar tendencia continua',
+    tone: 'blue',
+    visual: (
+      <svg
+        aria-hidden="true"
+        className="h-3 w-4 shrink-0 text-blue-600"
+        fill="none"
+        viewBox="0 0 16 12"
+      >
+        <path
+          d="M2 9.5 7 6.5 14 2.5"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+        />
+        <circle cx="2" cy="9.5" fill="currentColor" r="1.5" />
+        <circle cx="7" cy="6.5" fill="currentColor" r="1.5" />
+        <circle cx="14" cy="2.5" fill="currentColor" r="1.5" />
+      </svg>
+    ),
+  },
+  {
+    value: 'daily',
+    label: 'Por día',
+    ariaLabel: 'Mostrar barras por día',
+    tone: 'blue',
+    visual: (
+      <span aria-hidden="true" className="flex h-3 w-4 shrink-0 items-end gap-0.5">
+        <span className="h-1.5 flex-1 bg-blue-300" />
+        <span className="h-3 flex-1 bg-blue-600" />
+        <span className="h-2 flex-1 bg-blue-400" />
+      </span>
+    ),
+  },
+]
 
 const chartViewOptions: readonly SegmentedControlOption<ChartView>[] = [
   {
@@ -52,7 +96,7 @@ const chartViewOptions: readonly SegmentedControlOption<ChartView>[] = [
     visual: (
       <span aria-hidden="true" className="relative h-3 w-4 shrink-0">
         <span className="absolute inset-x-0 top-[5px] h-px bg-blue-500" />
-        <span className="absolute right-0 top-[3px] size-1.5 rounded-full border border-white bg-blue-600 shadow-[0_0_0_1px_#358ff3]" />
+        <span className="absolute right-0 top-[3px] size-1.5 rounded-full border border-white bg-blue-600 shadow-[0_0_0_1px_#275dff]" />
       </span>
     ),
   },
@@ -60,25 +104,30 @@ const chartViewOptions: readonly SegmentedControlOption<ChartView>[] = [
     value: 'comparison',
     label: 'Comparar periodo anterior',
     ariaLabel: 'Comparar con el periodo anterior',
-    tone: 'purple',
+    tone: 'coral',
     visual: (
       <span aria-hidden="true" className="relative h-3 w-4 shrink-0">
         <span className="absolute inset-x-0 top-[2px] h-px bg-blue-500" />
-        <span className="absolute inset-x-0 top-[8px] border-t border-dashed border-purple-600" />
+        <span className="absolute inset-x-0 top-[8px] border-t border-dashed border-coral-700" />
       </span>
     ),
   },
 ]
 
 export function ComparisonTrendChart({
+  allowComparison = true,
   current,
   previous = [],
+  size = 'default',
 }: {
+  allowComparison?: boolean
   current: ChartPoint[]
   previous?: ChartPoint[]
+  size?: 'default' | 'prominent'
 }) {
+  const [display, setDisplay] = useState<ChartDisplay>('trend')
   const [view, setView] = useState<ChartView>('current')
-  const isComparing = view === 'comparison'
+  const isComparing = allowComparison && view === 'comparison'
   const rows = useMemo<ComparisonRow[]>(
     () =>
       current.map((point, index) => {
@@ -97,63 +146,124 @@ export function ComparisonTrendChart({
     [current, previous],
   )
 
-  if (!rows.length) return <EmptyChart className="h-64" />
+  const heightClassName = size === 'prominent' ? 'h-64 md:h-80' : 'h-64'
+
+  if (!rows.length) return <EmptyChart className={heightClassName} />
+
+  const chartConfig = isComparing ? comparisonConfig : currentConfig
+  const chartAriaLabel = isComparing
+    ? display === 'daily'
+      ? 'Clics humanos por día del periodo seleccionado comparados con el periodo anterior'
+      : 'Clics humanos del periodo seleccionado comparados con el periodo anterior'
+    : display === 'daily'
+      ? 'Clics humanos por día del periodo seleccionado'
+      : 'Clics humanos del periodo seleccionado'
+  const pointLabel = (row: ComparisonRow) =>
+    isComparing
+      ? `${formatLongDate(row.currentDate)}: ${formatNumber(row.current)} clics humanos; ${formatLongDate(row.previousDate)}: ${formatNumber(row.previous)} del periodo anterior`
+      : `${formatLongDate(row.currentDate)}: ${formatNumber(row.current)} clics humanos`
 
   return (
-    <div className="overflow-hidden rounded-lg border border-blue-200/80 bg-card p-3">
+    <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <SegmentedControl
-          ariaLabel="Vista del gráfico"
-          onChange={setView}
-          options={chartViewOptions}
-          value={view}
-        />
-        <span>{isComparing ? 'Comparación por día equivalente' : 'Clics humanos por día'}</span>
-      </div>
-      <div className="h-64 min-w-0">
-        <AreaChart
-          animate={false}
-          ariaLabel={
-            isComparing
-              ? 'Clics humanos del periodo seleccionado comparados con el periodo anterior'
-              : 'Clics humanos del periodo seleccionado'
-          }
-          bloom="off"
-          className="rounded-md bg-blue-50/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          config={isComparing ? comparisonConfig : currentConfig}
-          data={rows}
-          getPointLabel={(row) =>
-            isComparing
-              ? `${formatLongDate(row.currentDate)}: ${formatNumber(row.current)} clics humanos; ${formatLongDate(row.previousDate)}: ${formatNumber(row.previous)} del periodo anterior`
-              : `${formatLongDate(row.currentDate)}: ${formatNumber(row.current)} clics humanos`
-          }
-          key={view}
-          margins={{ top: 30, right: 14, bottom: 30, left: 42 }}
-        >
-          <Grid horizontal vertical={false} />
-          <XAxis
-            dataKey="currentDate"
-            maxTicks={7}
-            tickFormatter={(value) => formatDate(String(value))}
+        <div className="flex flex-wrap items-center gap-2">
+          <SegmentedControl
+            ariaLabel="Representación del gráfico"
+            onChange={setDisplay}
+            options={chartDisplayOptions}
+            value={display}
           />
-          <YAxis tickFormatter={formatNumber} />
-          {isComparing ? <Legend isClickable /> : null}
-          <Tooltip
-            labelFormatter={(value) =>
-              isComparing ? String(value) : formatDate(String(value))
-            }
-            labelKey={isComparing ? 'tooltipLabel' : 'currentDate'}
-            valueFormatter={(value) => `${formatNumber(value)} clics humanos`}
-          />
-          <Area dataKey="current" variant="gradient">
-            <ActiveDot variant="colored-border" />
-          </Area>
-          {isComparing ? (
-            <Line dataKey="previous" variant="dotted">
-              <ActiveDot variant="colored-border" />
-            </Line>
+          {allowComparison ? (
+            <SegmentedControl
+              ariaLabel="Periodo del gráfico"
+              onChange={setView}
+              options={chartViewOptions}
+              value={view}
+            />
           ) : null}
-        </AreaChart>
+        </div>
+        {allowComparison ? (
+          <span>
+            {display === 'daily'
+              ? isComparing
+                ? 'Barras por día equivalente'
+                : 'Una barra por fecha'
+              : isComparing
+                ? 'Comparación por día equivalente'
+                : 'Clics humanos por día'}
+          </span>
+        ) : null}
+      </div>
+      <div className={cn('min-w-0', heightClassName)}>
+        {display === 'trend' ? (
+          <AreaChart
+            animate={false}
+            ariaLabel={chartAriaLabel}
+            bloom="off"
+            className="rounded-lg bg-blue-50/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            config={chartConfig}
+            data={rows}
+            getPointLabel={pointLabel}
+            key={`${display}-${view}`}
+            margins={{ top: 30, right: 14, bottom: 30, left: 42 }}
+          >
+            <Grid horizontal vertical={false} />
+            <XAxis
+              dataKey="currentDate"
+              maxTicks={7}
+              tickFormatter={(value) => formatDate(String(value))}
+            />
+            <YAxis tickFormatter={formatNumber} />
+            {isComparing ? <Legend isClickable /> : null}
+            <Tooltip
+              labelFormatter={(value) =>
+                isComparing ? String(value) : formatDate(String(value))
+              }
+              labelKey={isComparing ? 'tooltipLabel' : 'currentDate'}
+              valueFormatter={(value) => `${formatNumber(value)} clics humanos`}
+            />
+            {isComparing ? (
+              <Area dataKey="previous" strokeVariant="dashed" variant="gradient">
+                <ActiveDot variant="colored-border" />
+              </Area>
+            ) : null}
+            <Area dataKey="current" variant="gradient">
+              <ActiveDot variant="colored-border" />
+            </Area>
+          </AreaChart>
+        ) : (
+          <BarChart
+            animate={false}
+            ariaLabel={chartAriaLabel}
+            bloom="off"
+            className="rounded-lg bg-blue-50/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            config={chartConfig}
+            data={rows}
+            getPointLabel={pointLabel}
+            key={`${display}-${view}`}
+            margins={{ top: 24, right: 14, bottom: 30, left: 42 }}
+          >
+            <Grid horizontal vertical={false} />
+            <XAxis
+              dataKey="currentDate"
+              maxTicks={7}
+              tickFormatter={(value) => formatDate(String(value))}
+            />
+            <YAxis tickFormatter={formatNumber} />
+            {isComparing ? <Legend isClickable /> : null}
+            <Tooltip
+              labelFormatter={(value) =>
+                isComparing ? String(value) : formatDate(String(value))
+              }
+              labelKey={isComparing ? 'tooltipLabel' : 'currentDate'}
+              valueFormatter={(value) => `${formatNumber(value)} clics humanos`}
+            />
+            <Bar dataKey="current" variant="gradient" />
+            {isComparing ? (
+              <Bar dataKey="previous" strokeVariant="dashed" variant="gradient" />
+            ) : null}
+          </BarChart>
+        )}
       </div>
     </div>
   )
@@ -163,7 +273,7 @@ function EmptyChart({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'grid place-items-center rounded-lg border border-dashed border-purple-200 bg-purple-50/40 px-4 text-center text-sm text-muted-foreground',
+        'grid place-items-center rounded-lg border border-dashed border-blue-200 bg-blue-50 px-4 text-center text-sm text-muted-foreground',
         className,
       )}
     >

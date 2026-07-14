@@ -103,6 +103,54 @@ export type AnalyticsBreakdowns = {
   countries: AnalyticsBreakdownItem[]
   devices: AnalyticsBreakdownItem[]
 }
+
+export type AnalyticsInsightStatus = {
+  status: 'ready' | 'unavailable'
+  reason?: 'not_configured' | 'upstream_error'
+  source: 'analytics_engine' | 'demo'
+  scope: 'human'
+  coverage: {
+    from: string
+    to: string
+    truncated: boolean
+    retention: '3_months' | 'local_demo'
+  }
+}
+
+export type AnalyticsHeatmapCell = {
+  day: 1 | 2 | 3 | 4 | 5 | 6 | 7
+  hour: number
+  clicks: number
+}
+
+export type AnalyticsHeatmap = AnalyticsInsightStatus & {
+  totalClicks: number
+  cells: AnalyticsHeatmapCell[]
+}
+
+export type AnalyticsPerformanceItem = {
+  id: string
+  label: string
+  currentClicks: number
+  previousClicks: number
+  delta: AnalyticsDelta
+}
+
+export type AnalyticsUtmItem = {
+  value: string
+  currentClicks: number
+  previousClicks: number
+  sharePercent: number
+  delta: AnalyticsDelta
+}
+
+export type AnalyticsUtmPerformance = AnalyticsInsightStatus & {
+  totalClicks: number
+  previousCoverage: AnalyticsInsightStatus['coverage']
+  campaigns: AnalyticsUtmItem[]
+  sources: AnalyticsUtmItem[]
+  mediums: AnalyticsUtmItem[]
+}
 export type AnalyticsDateRange = {
   from: string
   to: string
@@ -151,7 +199,9 @@ export type AnalyticsTopLink = {
 }
 
 export type AnalyticsOverview = {
-  timezone: 'UTC'
+  timezone: string
+  aggregationMode: 'local' | 'mixed' | 'legacy-utc'
+  localAccuracyStartsOn: string
   range: AnalyticsDateRange
   previousRange: AnalyticsDateRange
   totals: AnalyticsPerformanceTotals
@@ -160,6 +210,11 @@ export type AnalyticsOverview = {
   series: AnalyticsSeriesPoint[]
   previousSeries: AnalyticsSeriesPoint[]
   breakdowns: AnalyticsBreakdowns
+  heatmap: AnalyticsHeatmap
+  categoryPerformance: {
+    campaigns: AnalyticsPerformanceItem[]
+    tags: AnalyticsPerformanceItem[]
+  }
   comparison: {
     humanClicks: AnalyticsDelta
     botClicks: AnalyticsDelta

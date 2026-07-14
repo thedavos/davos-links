@@ -112,7 +112,7 @@ describe('analytics helpers', () => {
         doubles: [1, Date.parse('2026-07-07T12:00:00.000Z')],
       }),
     )
-    expect(mocks.calls.at(-1)).toMatchObject({
+    expect(mocks.calls.at(-2)).toMatchObject({
       method: 'run',
       binds: [
         'met_lnk_test_2026-07-07',
@@ -122,6 +122,52 @@ describe('analytics helpers', () => {
         1,
         expect.any(String),
         expect.any(String),
+      ],
+    })
+    expect(mocks.calls.at(-1)).toMatchObject({
+      method: 'run',
+      binds: [
+        'hrm_lnk_test_2026-07-07T12',
+        'wsp_default',
+        'lnk_test',
+        '2026-07-07T12:00:00.000Z',
+        1,
+        expect.any(String),
+        expect.any(String),
+      ],
+    })
+  })
+
+  it('regroups hourly link metrics into the selected local day', async () => {
+    installCloudflareMocks({
+      dbResults: [
+        { starts_at: '2026-07-01T00:00:00.000Z' },
+        [
+          {
+            metric_hour: '2026-07-06T02:00:00.000Z',
+            human_clicks: 6,
+            bot_clicks: 1,
+          },
+        ],
+        [],
+      ],
+    })
+
+    const analytics = await getLinkAnalytics(
+      'lnk_test',
+      { from: '2026-07-05', to: '2026-07-05' },
+      'America/Lima',
+    )
+
+    expect(analytics).toMatchObject({
+      timezone: 'America/Lima',
+      aggregationMode: 'local',
+      series: [
+        {
+          metric_date: '2026-07-05',
+          human_clicks: 6,
+          bot_clicks: 1,
+        },
       ],
     })
   })
@@ -151,6 +197,22 @@ describe('analytics helpers', () => {
             short_path: 'alpha',
             current_human_clicks: 2,
             previous_human_clicks: 2,
+          },
+        ],
+        [
+          {
+            id: 'cmp_launch',
+            label: 'Lanzamiento',
+            current_clicks: 7,
+            previous_clicks: 2,
+          },
+        ],
+        [
+          {
+            id: 'tag_product',
+            label: 'Producto',
+            current_clicks: 5,
+            previous_clicks: 0,
           },
         ],
       ],
@@ -198,6 +260,24 @@ describe('analytics helpers', () => {
           delta: { status: 'comparable', absolute: 0, percent: 0 },
         },
       ],
+      categoryPerformance: {
+        campaigns: [
+          {
+            id: 'cmp_launch',
+            label: 'Lanzamiento',
+            currentClicks: 7,
+            previousClicks: 2,
+          },
+        ],
+        tags: [
+          {
+            id: 'tag_product',
+            label: 'Producto',
+            currentClicks: 5,
+            previousClicks: 0,
+          },
+        ],
+      },
     })
     expect(overview.series).toHaveLength(30)
     expect(overview.previousSeries).toHaveLength(30)

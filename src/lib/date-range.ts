@@ -17,9 +17,13 @@ export const MAX_ANALYTICS_RANGE_DAYS = 366
 const DAY_IN_MS = 86_400_000
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
-export function defaultDateRange(days = 30, now = new Date()): DateRange {
+export function defaultDateRange(
+  days = 30,
+  now = new Date(),
+  timeZone = ANALYTICS_TIME_ZONE,
+): DateRange {
   const safeDays = Math.max(1, Math.floor(days))
-  const to = parseIsoDate(toIsoDate(now))
+  const to = parseIsoDate(dateInTimeZone(now, timeZone))
   const from = addUtcDays(to, -(safeDays - 1))
 
   return { from: toIsoDate(from), to: toIsoDate(to) }
@@ -27,7 +31,7 @@ export function defaultDateRange(days = 30, now = new Date()): DateRange {
 
 export function validateDateRange(
   range: DateRange,
-  options: { maxDays?: number; now?: Date } = {},
+  options: { maxDays?: number; now?: Date; timeZone?: string } = {},
 ): DateRangeValidation {
   if (!range.from || !range.to) {
     return {
@@ -55,7 +59,12 @@ export function validateDateRange(
     }
   }
 
-  const today = parseIsoDate(toIsoDate(options.now ?? new Date()))
+  const today = parseIsoDate(
+    dateInTimeZone(
+      options.now ?? new Date(),
+      options.timeZone ?? ANALYTICS_TIME_ZONE,
+    ),
+  )
   if (from > today || to > today) {
     return {
       valid: false,
@@ -99,10 +108,10 @@ export function formatDateRange(
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    timeZone: options.timeZone ?? ANALYTICS_TIME_ZONE,
+    timeZone: ANALYTICS_TIME_ZONE,
   })
 
-  return `${formatter.format(parseIsoDate(range.from))} – ${formatter.format(parseIsoDate(range.to))}`
+  return `${formatter.format(parseCalendarDate(range.from))} – ${formatter.format(parseCalendarDate(range.to))}`
 }
 
 export function describeDateRange(
@@ -144,6 +153,31 @@ function parseIsoDate(value: string) {
   const parsed = safeParseIsoDate(value)
   if (!parsed) throw new RangeError(`Invalid ISO date: ${value}`)
   return parsed
+}
+
+function parseCalendarDate(value: string) {
+  const parsed = safeParseIsoDate(value)
+  if (!parsed) throw new RangeError(`Invalid ISO date: ${value}`)
+  parsed.setUTCHours(12)
+  return parsed
+}
+
+function dateInTimeZone(date: Date, timeZone: string) {
+  try {
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat('en-CA', {
+        day: '2-digit',
+        month: '2-digit',
+        timeZone,
+        year: 'numeric',
+      })
+        .formatToParts(date)
+        .map((part) => [part.type, part.value]),
+    )
+    return `${parts.year}-${parts.month}-${parts.day}`
+  } catch {
+    return toIsoDate(date)
+  }
 }
 
 function addUtcDays(date: Date, days: number) {

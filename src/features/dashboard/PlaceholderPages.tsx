@@ -1,14 +1,21 @@
-import { Archive, Check, Plus, Save } from 'lucide-react'
+import { Archive, Check, Clock3, Plus, RotateCcw, Save, Trash2 } from 'lucide-react'
 import type { FormEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { PageHeader } from '#/components/DashboardShell'
+import { useTimeZone } from '#/components/TimeZoneProvider'
 import { DitherAvatar } from '#/components/dither-kit'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
-import { DEFAULT_DOMAIN } from '#/lib/constants'
+import { authClient } from '#/lib/auth/client'
+import { BRAND_NAME } from '#/lib/constants'
 import type { ApiResult, CampaignRow, TagRow } from '#/lib/types'
+import {
+  formatTimeZoneLabel,
+  isValidTimeZone,
+  supportedTimeZones,
+} from '#/lib/time-zone'
 
 export function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([])
@@ -55,7 +62,7 @@ export function CampaignsPage() {
         detail="Agrupa enlaces relacionados para revisar mejor una iniciativa o lanzamiento."
         title="Campañas"
       />
-      <form className="mb-4 grid gap-3 border border-border bg-muted/40 p-3" onSubmit={create}>
+      <form className="mb-6 grid gap-3" onSubmit={create}>
         <div className="grid gap-3 md:grid-cols-[1fr_1.4fr_auto] md:items-end">
           <Label>
             Nombre
@@ -100,10 +107,12 @@ export function CampaignsPage() {
                 ) : null}
               </div>
               <Button
+                aria-label={`Archivar ${campaign.name}`}
+                ditherVariant="dotted-subtle"
                 onClick={() => archive(campaign.id)}
                 size="sm"
                 type="button"
-                variant="outline"
+                variant="ghost"
               >
                 <Archive size={15} />
                 Archivar
@@ -162,7 +171,7 @@ export function TagsPage() {
         detail="Usa etiquetas para encontrar y ordenar enlaces más rápido."
         title="Etiquetas"
       />
-      <form className="mb-4 grid gap-3 border border-border bg-muted/40 p-3" onSubmit={create}>
+      <form className="mb-6 grid gap-3" onSubmit={create}>
         <div className="grid gap-3 md:grid-cols-[1fr_120px_auto] md:items-end">
           <Label>
             Nombre
@@ -200,17 +209,17 @@ export function TagsPage() {
                   className="size-4 border border-border"
                   style={{ backgroundColor: tag.color ?? '#111111' }}
                 />
-                <div>
-                  <p className="text-sm font-medium">{tag.name}</p>
-                  <p className="mono mt-1 text-xs text-muted-foreground">{tag.slug}</p>
-                </div>
+                <p className="text-sm font-medium">{tag.name}</p>
               </div>
               <Button
+                aria-label={`Eliminar ${tag.name}`}
+                ditherVariant="dotted-subtle"
                 onClick={() => remove(tag.id)}
                 size="sm"
                 type="button"
-                variant="outline"
+                variant="ghost"
               >
+                <Trash2 size={15} />
                 Eliminar
               </Button>
             </Card>
@@ -228,23 +237,46 @@ export function SettingsPage({
 }: {
   user?: { email?: string; name?: string }
 }) {
+  const { data: session } = authClient.useSession()
+  const {
+    detectedTimeZone,
+    preference: timeZonePreference,
+    setPreference: setTimeZonePreference,
+    timeZone,
+  } = useTimeZone()
+  const currentUser = session?.user ?? user
   const [name, setName] = useState(user?.name ?? '')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [timeZoneInput, setTimeZoneInput] = useState(timeZonePreference ?? '')
+  const [timeZoneMessage, setTimeZoneMessage] = useState('')
+  const [timeZoneError, setTimeZoneError] = useState('')
+  const timeZoneListId = useId()
+  const timeZoneOptions = useMemo(
+    () => supportedTimeZones().map((zone) => ({
+      label: formatTimeZoneLabel(zone),
+      value: zone,
+    })),
+    [],
+  )
+
+  useEffect(() => {
+    setName(currentUser?.name ?? '')
+  }, [currentUser?.name])
+
+  useEffect(() => {
+    setTimeZoneInput(timeZonePreference ?? '')
+  }, [timeZonePreference])
 
   async function saveProfile(event: FormEvent) {
     event.preventDefault()
     setMessage('')
     setError('')
-    const response = await fetch('/api/auth/update-user', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name }),
-    })
-    if (!response.ok) {
+    const result = await authClient.updateUser({ name })
+    if (result.error) {
       setError('No se pudo actualizar el perfil.')
       return
     }
@@ -278,10 +310,40 @@ export function SettingsPage({
     setMessage('Contraseña actualizada.')
   }
 
+  async function saveTimeZone(event: FormEvent) {
+    event.preventDefault()
+    setTimeZoneMessage('')
+    setTimeZoneError('')
+    const next = timeZoneInput.trim() || null
+    if (next !== null && !isValidTimeZone(next)) {
+      setTimeZoneError('Selecciona una zona horaria de la lista.')
+      return
+    }
+    const response = await fetch('/api/settings/preferences', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ timeZone: next }),
+    })
+    const result = (await response.json().catch(() => ({}))) as {
+      error?: string
+      timeZone?: string | null
+    }
+    if (!response.ok) {
+      setTimeZoneError(result.error ?? 'No se pudo actualizar la zona horaria.')
+      return
+    }
+    const saved = result.timeZone ?? null
+    setTimeZonePreference(saved)
+    setTimeZoneInput(saved ?? '')
+    setTimeZoneMessage(
+      saved ? 'Zona horaria actualizada.' : 'Zona automática activada.',
+    )
+  }
+
   return (
     <>
       <PageHeader
-        detail="Revisa los datos básicos de tu dominio y del entorno local."
+        detail="Administra tu perfil y las credenciales de acceso."
         title="Ajustes"
       />
       {message ? (
@@ -295,19 +357,19 @@ export function SettingsPage({
           {error}
         </p>
       ) : null}
-      <div className="mb-6 grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <DitherAvatar
               decorative
               animate={false}
               bloom="low"
-              className="size-11 overflow-hidden rounded-md border border-purple-200 bg-purple-50"
-              name={user?.name || user?.email || 'Davos Links'}
+              className="size-11 overflow-hidden rounded-md border border-blue-200 bg-blue-50"
+              name={name || currentUser?.email || BRAND_NAME}
             />
             <div>
               <h2 className="text-sm font-medium">Perfil</h2>
-              <p className="mono mt-1 text-xs text-purple-700">Identidad del operador</p>
+              <p className="mono mt-1 text-xs text-blue-700">Identidad del operador</p>
             </div>
           </div>
           <form className="mt-4 grid gap-4" onSubmit={saveProfile}>
@@ -320,12 +382,69 @@ export function SettingsPage({
             </Label>
             <Label>
               Correo
-              <Input disabled value={user?.email ?? ''} />
+              <Input disabled value={currentUser?.email ?? ''} />
             </Label>
             <Button className="w-fit" type="submit">
               <Save size={16} />
               Guardar
             </Button>
+          </form>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-md border border-blue-200 bg-blue-50 text-blue-700">
+              <Clock3 aria-hidden="true" size={18} />
+            </div>
+            <div>
+              <h2 className="text-sm font-medium">Zona horaria</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Fechas y analítica en tu hora local
+              </p>
+            </div>
+          </div>
+          <form className="mt-4 grid gap-3" onSubmit={saveTimeZone}>
+            <Label>
+              Zona IANA
+              <Input
+                aria-describedby={`${timeZoneListId}-hint`}
+                list={timeZoneListId}
+                onChange={(event) => setTimeZoneInput(event.target.value)}
+                placeholder={formatTimeZoneLabel(detectedTimeZone)}
+                value={timeZoneInput}
+              />
+              <datalist id={timeZoneListId}>
+                {timeZoneOptions.map((option) => (
+                  <option key={option.value} label={option.label} value={option.value} />
+                ))}
+              </datalist>
+            </Label>
+            <p className="text-xs text-muted-foreground" id={`${timeZoneListId}-hint`}>
+              {timeZonePreference
+                ? `Activa: ${formatTimeZoneLabel(timeZone)}`
+                : `Automática: ${formatTimeZoneLabel(detectedTimeZone)}`}
+            </p>
+            {timeZoneError ? (
+              <p className="text-xs text-destructive" role="alert">{timeZoneError}</p>
+            ) : null}
+            {timeZoneMessage ? (
+              <p className="text-xs text-blue-700" role="status">{timeZoneMessage}</p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" type="submit">
+                <Save size={15} />
+                Guardar zona
+              </Button>
+              <Button
+                ditherVariant="dotted-subtle"
+                onClick={() => setTimeZoneInput('')}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <RotateCcw size={15} />
+                Automática
+              </Button>
+            </div>
           </form>
         </Card>
         <Card className="p-4">
@@ -364,12 +483,6 @@ export function SettingsPage({
           </form>
         </Card>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <Setting label="Dominio principal" value={DEFAULT_DOMAIN} />
-        <Setting label="Base de datos" value="LINKS_DB" />
-        <Setting label="Caché de enlaces" value="SHORT_LINK_CACHE" />
-        <Setting label="Métricas" value="CLICK_ANALYTICS" />
-      </div>
     </>
   )
 }
@@ -377,14 +490,5 @@ export function SettingsPage({
 export function Empty({ title }: { title: string }) {
   return (
     <Card className="p-8 text-center text-sm text-muted-foreground">{title}</Card>
-  )
-}
-
-export function Setting({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mono mt-2 text-sm">{value}</p>
-    </Card>
   )
 }

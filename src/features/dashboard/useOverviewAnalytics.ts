@@ -64,6 +64,7 @@ const emptyComparison: AnalyticsComparison = {
 export function useOverviewAnalytics<T extends { range: DateRange } = OverviewAnalytics>(
   range: DateRange,
   normalize?: (payload: unknown, requestedRange: DateRange) => T,
+  timeZone = ANALYTICS_TIME_ZONE,
 ) {
   const [requestState, setRequestState] = useState<RequestState<T>>({
     data: null,
@@ -87,10 +88,10 @@ export function useOverviewAnalytics<T extends { range: DateRange } = OverviewAn
     }))
 
     const request: Promise<T> = normalize
-      ? fetchOverviewPayload(range, controller.signal).then((payload) =>
+      ? fetchOverviewPayload(range, controller.signal, timeZone).then((payload) =>
           normalize(payload, range),
         )
-      : fetchOverviewAnalytics(range, controller.signal).then(
+      : fetchOverviewAnalytics(range, controller.signal, timeZone).then(
           (data) => data as unknown as T,
         )
 
@@ -117,7 +118,7 @@ export function useOverviewAnalytics<T extends { range: DateRange } = OverviewAn
       })
 
     return () => controller.abort()
-  }, [range.from, range.to, retryNonce, normalize])
+  }, [range.from, range.to, retryNonce, normalize, timeZone])
 
   const retry = useCallback(() => setRetryNonce((value) => value + 1), [])
   const hasStaleData = Boolean(
@@ -135,8 +136,9 @@ export function useOverviewAnalytics<T extends { range: DateRange } = OverviewAn
 export async function fetchOverviewAnalytics(
   range: DateRange,
   signal?: AbortSignal,
+  timeZone = ANALYTICS_TIME_ZONE,
 ): Promise<OverviewAnalytics> {
-  const payload = (await fetchOverviewPayload(range, signal)) as Partial<OverviewAnalytics> & {
+  const payload = (await fetchOverviewPayload(range, signal, timeZone)) as Partial<OverviewAnalytics> & {
     timezone?: string
   }
 
@@ -158,8 +160,13 @@ export async function fetchOverviewAnalytics(
   }
 }
 
-async function fetchOverviewPayload(range: DateRange, signal?: AbortSignal) {
+async function fetchOverviewPayload(
+  range: DateRange,
+  signal?: AbortSignal,
+  timeZone = ANALYTICS_TIME_ZONE,
+) {
   const params = new URLSearchParams(range)
+  params.set('timeZone', timeZone)
   const response = await fetch(`/api/analytics/overview?${params.toString()}`, {
     signal,
   })

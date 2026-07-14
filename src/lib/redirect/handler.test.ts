@@ -37,8 +37,10 @@ describe('handlePublicRedirect', () => {
     const response = await handlePublicRedirect(
       new Request('https://links.davosdo.dev/railway'),
     )
+    const body = await response.text()
     expect(response.status).toBe(404)
-    expect(await response.text()).toContain('No existe un enlace configurado para /railway')
+    expect(body).toContain('No existe un enlace configurado para /railway')
+    expect(body).toContain('aria-label="atajo by davosdo"')
   })
 
   it('returns disabled and expired pages when links cannot redirect', async () => {

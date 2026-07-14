@@ -20,6 +20,7 @@ import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected/dashboard'
 import { Route as ProtectedDashboardIndexRouteImport } from './routes/_protected/dashboard.index'
 import { Route as ApiTagsIdRouteImport } from './routes/api/tags/$id'
+import { Route as ApiSettingsPreferencesRouteImport } from './routes/api/settings/preferences'
 import { Route as ApiLinksCheckPathRouteImport } from './routes/api/links/check-path'
 import { Route as ApiLinksIdRouteImport } from './routes/api/links/$id'
 import { Route as ApiCampaignsIdRouteImport } from './routes/api/campaigns/$id'
@@ -93,6 +94,11 @@ const ApiTagsIdRoute = ApiTagsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiTagsRoute,
+} as any)
+const ApiSettingsPreferencesRoute = ApiSettingsPreferencesRouteImport.update({
+  id: '/api/settings/preferences',
+  path: '/api/settings/preferences',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLinksCheckPathRoute = ApiLinksCheckPathRouteImport.update({
   id: '/check-path',
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/api/campaigns/$id': typeof ApiCampaignsIdRoute
   '/api/links/$id': typeof ApiLinksIdRouteWithChildren
   '/api/links/check-path': typeof ApiLinksCheckPathRoute
+  '/api/settings/preferences': typeof ApiSettingsPreferencesRoute
   '/api/tags/$id': typeof ApiTagsIdRoute
   '/dashboard/': typeof ProtectedDashboardIndexRoute
   '/dashboard/links/$id': typeof ProtectedDashboardLinksIdRouteWithChildren
@@ -245,6 +252,7 @@ export interface FileRoutesByTo {
   '/api/campaigns/$id': typeof ApiCampaignsIdRoute
   '/api/links/$id': typeof ApiLinksIdRouteWithChildren
   '/api/links/check-path': typeof ApiLinksCheckPathRoute
+  '/api/settings/preferences': typeof ApiSettingsPreferencesRoute
   '/api/tags/$id': typeof ApiTagsIdRoute
   '/dashboard': typeof ProtectedDashboardIndexRoute
   '/dashboard/links/$id': typeof ProtectedDashboardLinksIdRouteWithChildren
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/api/campaigns/$id': typeof ApiCampaignsIdRoute
   '/api/links/$id': typeof ApiLinksIdRouteWithChildren
   '/api/links/check-path': typeof ApiLinksCheckPathRoute
+  '/api/settings/preferences': typeof ApiSettingsPreferencesRoute
   '/api/tags/$id': typeof ApiTagsIdRoute
   '/_protected/dashboard/': typeof ProtectedDashboardIndexRoute
   '/_protected/dashboard/links/$id': typeof ProtectedDashboardLinksIdRouteWithChildren
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id'
     | '/api/links/$id'
     | '/api/links/check-path'
+    | '/api/settings/preferences'
     | '/api/tags/$id'
     | '/dashboard/'
     | '/dashboard/links/$id'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id'
     | '/api/links/$id'
     | '/api/links/check-path'
+    | '/api/settings/preferences'
     | '/api/tags/$id'
     | '/dashboard'
     | '/dashboard/links/$id'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id'
     | '/api/links/$id'
     | '/api/links/check-path'
+    | '/api/settings/preferences'
     | '/api/tags/$id'
     | '/_protected/dashboard/'
     | '/_protected/dashboard/links/$id'
@@ -397,6 +409,7 @@ export interface RootRouteChildren {
   ApiAnalyticsExportDotcsvRoute: typeof ApiAnalyticsExportDotcsvRoute
   ApiAnalyticsOverviewRoute: typeof ApiAnalyticsOverviewRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiSettingsPreferencesRoute: typeof ApiSettingsPreferencesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -477,6 +490,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/tags/$id'
       preLoaderRoute: typeof ApiTagsIdRouteImport
       parentRoute: typeof ApiTagsRoute
+    }
+    '/api/settings/preferences': {
+      id: '/api/settings/preferences'
+      path: '/api/settings/preferences'
+      fullPath: '/api/settings/preferences'
+      preLoaderRoute: typeof ApiSettingsPreferencesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/links/check-path': {
       id: '/api/links/check-path'
@@ -746,6 +766,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnalyticsExportDotcsvRoute: ApiAnalyticsExportDotcsvRoute,
   ApiAnalyticsOverviewRoute: ApiAnalyticsOverviewRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiSettingsPreferencesRoute: ApiSettingsPreferencesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

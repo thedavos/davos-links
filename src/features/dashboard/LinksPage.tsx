@@ -171,7 +171,7 @@ export function LinksPage() {
         detail="Crea, revisa y pausa tus enlaces desde un solo lugar."
         title="Enlaces"
       />
-      <div className="mb-4 grid gap-2 border border-border bg-muted/40 p-3 md:grid-cols-[1fr_160px_180px_180px]">
+      <div className="mb-6 grid gap-2 md:grid-cols-[1fr_160px_180px_180px]">
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"

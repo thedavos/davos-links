@@ -14,7 +14,7 @@ const data = [
 ]
 
 const config = {
-  clicks: { label: 'Clics', color: 'green' },
+  clicks: { label: 'Clics', color: 'blue' },
 } as const
 
 function ChartStateProbe() {

@@ -121,7 +121,6 @@ export function LinkForm({
         <Label>
           Ruta corta
           <Input
-            className="mono"
             onChange={(event) =>
               setValues((current) => ({ ...current, shortPath: event.target.value }))
             }

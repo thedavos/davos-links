@@ -4,6 +4,7 @@ import {
   getAnalyticsOverviewForRange,
   isDateRangeValidationError,
   parseDateRange,
+  parseTimeZone,
 } from '#/lib/analytics/index'
 import { json } from '#/lib/http'
 
@@ -11,7 +12,9 @@ export async function analyticsOverviewHandler(request: Request) {
   await requireUser(request.headers)
   const url = new URL(request.url)
   try {
-    return json(await getAnalyticsOverviewForRange(parseDateRange(url)))
+    return json(
+      await getAnalyticsOverviewForRange(parseDateRange(url), parseTimeZone(url)),
+    )
   } catch (error) {
     if (!isDateRangeValidationError(error)) throw error
     return json(

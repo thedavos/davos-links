@@ -30,6 +30,22 @@ describe('TrafficBreakdowns', () => {
     )
 
     expect(screen.getByText('20 clics analizados')).toBeInTheDocument()
+    expect(screen.getByText('Solo clics humanos del periodo seleccionado')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Principales orígenes' })).toHaveAttribute(
+      'data-slot',
+      'card',
+    )
+    expect(screen.getByRole('region', { name: 'Países destacados' })).toHaveAttribute(
+      'data-slot',
+      'card',
+    )
+    expect(screen.getByRole('region', { name: 'Dispositivos' })).toHaveAttribute(
+      'data-slot',
+      'card',
+    )
+    expect(screen.queryByText('ORIGEN')).not.toBeInTheDocument()
+    expect(screen.queryByText('PAÍS')).not.toBeInTheDocument()
+    expect(screen.queryByText('DISPOSITIVO')).not.toBeInTheDocument()
     expect(screen.getByText('Directo / sin referencia')).toBeInTheDocument()
     expect(screen.getByText('Red Tor')).toBeInTheDocument()
     expect(screen.getByText('Desconocido')).toBeInTheDocument()

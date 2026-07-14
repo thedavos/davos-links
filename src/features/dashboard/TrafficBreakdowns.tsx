@@ -6,38 +6,34 @@ import { cn } from '#/lib/utils'
 
 const CARD_CONFIG = {
   referrers: {
+    id: 'traffic-referrers-title',
     title: 'Principales orígenes',
-    eyebrow: 'ORIGEN',
-    border: 'border-purple-200',
-    text: 'text-purple-800',
-    fill: 'bg-purple-500 text-purple-950',
+    fill: 'bg-blue-500',
   },
   countries: {
+    id: 'traffic-countries-title',
     title: 'Países destacados',
-    eyebrow: 'PAÍS',
-    border: 'border-blue-200',
-    text: 'text-blue-800',
-    fill: 'bg-blue-500 text-blue-950',
+    fill: 'bg-coral-500',
   },
   devices: {
+    id: 'traffic-devices-title',
     title: 'Dispositivos',
-    eyebrow: 'DISPOSITIVO',
-    border: 'border-green-200',
-    text: 'text-success',
-    fill: 'bg-green-500 text-green-950',
+    fill: 'bg-blue-700',
   },
 } as const
 
-type BreakdownKind = keyof typeof CARD_CONFIG
+export type BreakdownKind = keyof typeof CARD_CONFIG
 
 export function TrafficBreakdowns({
   breakdowns,
-  detail = 'Solo clics humanos · datos detallados de los últimos 3 meses',
+  className,
+  detail = 'Solo clics humanos del periodo seleccionado',
   loading,
   onRetry,
   title = 'Desglose del tráfico',
 }: {
   breakdowns: AnalyticsBreakdowns | null
+  className?: string
   detail?: string
   loading: boolean
   onRetry: () => void
@@ -46,8 +42,12 @@ export function TrafficBreakdowns({
   const unavailable = breakdowns?.status === 'unavailable'
 
   return (
-    <section aria-busy={loading} aria-labelledby="traffic-breakdown-title" className="mt-8">
-      <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+    <section
+      aria-busy={loading}
+      aria-labelledby="traffic-breakdown-title"
+      className={cn('mt-8', className)}
+    >
+      <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-medium" id="traffic-breakdown-title">
@@ -94,9 +94,9 @@ export function TrafficBreakdowns({
         </p>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-3 md:gap-6">
         {(['referrers', 'countries', 'devices'] as const).map((kind) => (
-          <BreakdownCard
+          <TrafficBreakdownCard
             items={breakdowns?.status === 'ready' ? breakdowns[kind] : []}
             key={kind}
             kind={kind}
@@ -109,12 +109,14 @@ export function TrafficBreakdowns({
   )
 }
 
-function BreakdownCard({
+export function TrafficBreakdownCard({
+  className,
   items,
   kind,
   loading,
   unavailable,
 }: {
+  className?: string
   items: AnalyticsBreakdownItem[]
   kind: BreakdownKind
   loading: boolean
@@ -123,14 +125,15 @@ function BreakdownCard({
   const config = CARD_CONFIG[kind]
 
   return (
-    <Card className={cn('overflow-hidden border-t-2 p-4', config.border)}>
-      <p className={cn('mono text-[10px] font-semibold tracking-[0.12em]', config.text)}>
-        {config.eyebrow}
-      </p>
-      <h3 className="mt-1 text-sm font-medium">{config.title}</h3>
+    <Card
+      aria-labelledby={config.id}
+      className={cn('min-w-0 p-4', className)}
+      role="region"
+    >
+      <h3 className="text-sm font-semibold" id={config.id}>{config.title}</h3>
 
       {loading ? (
-        <div aria-label={`Cargando ${config.title.toLowerCase()}`} className="mt-5 grid gap-4">
+        <div aria-label={`Cargando ${config.title.toLowerCase()}`} className="mt-4 grid gap-4">
           {[72, 54, 38].map((width) => (
             <div className="grid gap-2" key={width}>
               <div className="h-3 rounded-sm bg-muted" style={{ width: `${width}%` }} />
@@ -166,7 +169,7 @@ function BreakdownCard({
           })}
         </ol>
       ) : (
-        <p className="mt-6 text-sm text-muted-foreground">
+        <p className="mt-4 text-sm text-muted-foreground">
           {unavailable ? 'Datos no disponibles.' : 'Sin clics humanos en este periodo.'}
         </p>
       )}

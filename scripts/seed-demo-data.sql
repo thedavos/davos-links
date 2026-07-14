@@ -283,3 +283,66 @@ ON CONFLICT(link_id, metric_date) DO UPDATE SET
   devices_json = excluded.devices_json,
   browsers_json = excluded.browsers_json,
   updated_at = excluded.updated_at;
+
+WITH demo_metrics AS (
+  SELECT
+    link_id,
+    metric_date,
+    MAX(clicks - bot_clicks, 0) AS human_clicks
+  FROM daily_link_metrics
+  WHERE workspace_id = 'wsp_default'
+    AND id LIKE 'met_demo_%'
+    AND metric_date BETWEEN date('now', '-59 days') AND date('now')
+),
+slices AS (
+  SELECT
+    link_id,
+    metric_date,
+    0 AS slice_index,
+    14 + (CAST(strftime('%d', metric_date) AS INTEGER) % 4) AS hour_utc,
+    'newsletter' AS utm_source,
+    'email' AS utm_medium,
+    'lanzamiento-q3' AS utm_campaign,
+    human_clicks
+      - CAST(human_clicks * 0.28 AS INTEGER)
+      - CAST(human_clicks * 0.22 AS INTEGER)
+      - CAST(human_clicks * 0.18 AS INTEGER) AS slice_clicks
+  FROM demo_metrics
+  UNION ALL
+  SELECT link_id, metric_date, 1, 9, 'linkedin', 'social', 'developer-awareness',
+    CAST(human_clicks * 0.28 AS INTEGER)
+  FROM demo_metrics
+  UNION ALL
+  SELECT link_id, metric_date, 2, 18, 'x', 'social', 'product-release',
+    CAST(human_clicks * 0.22 AS INTEGER)
+  FROM demo_metrics
+  UNION ALL
+  SELECT link_id, metric_date, 3, 21, '', '', '',
+    CAST(human_clicks * 0.18 AS INTEGER)
+  FROM demo_metrics
+)
+INSERT INTO demo_click_slices (
+  id, workspace_id, link_id, metric_date, hour_utc,
+  utm_source, utm_medium, utm_campaign, human_clicks, created_at, updated_at
+)
+SELECT
+  'slice_demo_' || link_id || '_' || replace(metric_date, '-', '') || '_' || slice_index,
+  'wsp_default',
+  link_id,
+  metric_date,
+  hour_utc,
+  utm_source,
+  utm_medium,
+  utm_campaign,
+  slice_clicks,
+  datetime(metric_date),
+  datetime('now')
+FROM slices
+WHERE slice_clicks > 0
+ON CONFLICT(id) DO UPDATE SET
+  hour_utc = excluded.hour_utc,
+  utm_source = excluded.utm_source,
+  utm_medium = excluded.utm_medium,
+  utm_campaign = excluded.utm_campaign,
+  human_clicks = excluded.human_clicks,
+  updated_at = excluded.updated_at;

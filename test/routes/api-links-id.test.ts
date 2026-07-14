@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   getAnalyticsOverview: vi.fn(),
   exportMetricsCsv: vi.fn(),
   parseDateRange: vi.fn(() => ({ from: '2026-07-01', to: '2026-07-07' })),
+  parseTimeZone: vi.fn(() => 'UTC'),
   isDateRangeValidationError: vi.fn(
     (error: unknown) =>
       error instanceof Error &&
@@ -50,6 +51,7 @@ vi.mock('../../src/lib/analytics', () => ({
   getAnalyticsOverviewForRange: mocks.getAnalyticsOverview,
   exportMetricsCsv: mocks.exportMetricsCsv,
   parseDateRange: mocks.parseDateRange,
+  parseTimeZone: mocks.parseTimeZone,
   isDateRangeValidationError: mocks.isDateRangeValidationError,
 }))
 
@@ -121,6 +123,7 @@ describe('link detail API handlers', () => {
     expect(mocks.exportMetricsCsv).toHaveBeenCalledWith(
       { from: '2026-07-01', to: '2026-07-07' },
       null,
+      'UTC',
     )
   })
 

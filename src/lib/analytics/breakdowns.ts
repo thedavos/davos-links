@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers'
 import { DEFAULT_WORKSPACE_ID } from '#/lib/constants'
 import type { AnalyticsBreakdownItem, AnalyticsBreakdowns } from '#/lib/types'
+import { FALLBACK_TIME_ZONE, localRangeToUtc } from '#/lib/time-zone'
 
 const ANALYTICS_DATASET = 'davos_links_clicks'
 const ANALYTICS_TIMEOUT_MS = 8_000
@@ -11,6 +12,9 @@ export const ANALYTICS_COLUMNS = {
   country: 'blob5',
   referrerDomain: 'blob10',
   device: 'blob14',
+  utmSource: 'blob16',
+  utmMedium: 'blob17',
+  utmCampaign: 'blob18',
   isBot: 'double1',
   linkId: 'index1',
 } as const
@@ -43,25 +47,30 @@ const analyticsEnv = env as AnalyticsEnv
 export async function getTrafficBreakdowns(
   linkId: string,
   range: DateRange,
+  timeZone = FALLBACK_TIME_ZONE,
 ): Promise<AnalyticsBreakdowns> {
   return getBreakdowns(
     { kind: 'link', linkId, workspaceId: DEFAULT_WORKSPACE_ID },
     range,
+    timeZone,
   )
 }
 
 export async function getGlobalTrafficBreakdowns(
   range: DateRange,
+  timeZone = FALLBACK_TIME_ZONE,
 ): Promise<AnalyticsBreakdowns> {
   return getBreakdowns(
     { kind: 'workspace', workspaceId: DEFAULT_WORKSPACE_ID },
     range,
+    timeZone,
   )
 }
 
 async function getBreakdowns(
   scope: BreakdownScope,
   range: DateRange,
+  timeZone: string,
 ): Promise<AnalyticsBreakdowns> {
   const source = analyticsEnv.ANALYTICS_DATA_SOURCE === 'demo' ? 'demo' : 'analytics_engine'
 
@@ -73,12 +82,13 @@ async function getBreakdowns(
     return getDemoBreakdowns(scope, range)
   }
 
-  return getCloudflareBreakdowns(scope, range)
+  return getCloudflareBreakdowns(scope, range, timeZone)
 }
 
 async function getCloudflareBreakdowns(
   scope: BreakdownScope,
   range: DateRange,
+  timeZone: string,
 ): Promise<AnalyticsBreakdowns> {
   const coverage = cloudflareCoverage(range)
   const accountId = analyticsEnv.CLOUDFLARE_ACCOUNT_ID?.trim() ?? ''
@@ -97,7 +107,7 @@ async function getCloudflareBreakdowns(
     return readyBreakdowns('analytics_engine', coverage, '3_months', 0, {})
   }
 
-  const where = analyticsWhere(scope, coverage)
+  const where = analyticsWhere(scope, coverage, timeZone)
 
   try {
     const [totalRows, referrerRows, countryRows, deviceRows] = await Promise.all([
@@ -234,13 +244,19 @@ async function queryAnalyticsEngine(
   return payload.data.filter(isRecord)
 }
 
-function analyticsWhere(scope: BreakdownScope, range: DateRange) {
-  const nextDay = toDateString(addDays(parseDateString(range.to), 1))
+function analyticsWhere(
+  scope: BreakdownScope,
+  range: DateRange,
+  timeZone: string,
+) {
+  const bounds = localRangeToUtc(range, timeZone)
+  const from = toSqlDateTime(bounds.from)
+  const to = toSqlDateTime(bounds.toExclusive)
   const filters = [
     `${ANALYTICS_COLUMNS.workspaceId} = '${escapeSqlString(scope.workspaceId)}'`,
     `${ANALYTICS_COLUMNS.isBot} = 0`,
-    `timestamp >= toDateTime('${range.from} 00:00:00')`,
-    `timestamp < toDateTime('${nextDay} 00:00:00')`,
+    `timestamp >= toDateTime('${from}', 'Etc/UTC')`,
+    `timestamp < toDateTime('${to}', 'Etc/UTC')`,
   ]
   if (scope.kind === 'link') {
     filters.unshift(
@@ -248,6 +264,10 @@ function analyticsWhere(scope: BreakdownScope, range: DateRange) {
     )
   }
   return filters.join(' AND ')
+}
+
+function toSqlDateTime(date: Date) {
+  return date.toISOString().slice(0, 19).replace('T', ' ')
 }
 
 function demoFilters(scope: BreakdownScope, range: DateRange) {
@@ -365,16 +385,6 @@ function isValidScope(scope: BreakdownScope) {
 
 function escapeSqlString(value: string) {
   return value.replaceAll("'", "''")
-}
-
-function parseDateString(value: string) {
-  return new Date(`${value}T00:00:00.000Z`)
-}
-
-function addDays(date: Date, days: number) {
-  const copy = new Date(date)
-  copy.setUTCDate(copy.getUTCDate() + days)
-  return copy
 }
 
 function toDateString(date: Date) {

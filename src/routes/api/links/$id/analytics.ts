@@ -4,6 +4,7 @@ import {
   getLinkAnalytics,
   isDateRangeValidationError,
   parseDateRange,
+  parseTimeZone,
 } from '#/lib/analytics/index'
 import { json } from '#/lib/http'
 
@@ -11,7 +12,9 @@ export async function linkAnalyticsHandler(request: Request, id: string) {
   await requireUser(request.headers)
   const url = new URL(request.url)
   try {
-    return json(await getLinkAnalytics(id, parseDateRange(url)))
+    return json(
+      await getLinkAnalytics(id, parseDateRange(url), parseTimeZone(url)),
+    )
   } catch (error) {
     if (!isDateRangeValidationError(error)) throw error
     return json(

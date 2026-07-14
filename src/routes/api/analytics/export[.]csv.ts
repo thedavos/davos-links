@@ -4,6 +4,7 @@ import {
   exportMetricsCsv,
   isDateRangeValidationError,
   parseDateRange,
+  parseTimeZone,
 } from '#/lib/analytics/index'
 import { json } from '#/lib/http'
 
@@ -14,6 +15,7 @@ export async function analyticsExportCsvHandler(request: Request) {
     const csv = await exportMetricsCsv(
       parseDateRange(url),
       url.searchParams.get('linkId'),
+      parseTimeZone(url),
     )
     return new Response(csv, {
       headers: {

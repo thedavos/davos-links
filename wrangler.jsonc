@@ -9,7 +9,7 @@
   },
   "vars": {
     "BETTER_AUTH_URL": "https://links.davosdo.dev",
-    "CLOUDFLARE_ACCOUNT_ID": ""
+    "CLOUDFLARE_ACCOUNT_ID": "122721941f51a8349d5c8fcbaec429af"
   },
   "d1_databases": [
     {

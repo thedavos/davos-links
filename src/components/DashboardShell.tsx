@@ -9,8 +9,10 @@ import {
   Settings,
   Tag,
 } from 'lucide-react'
+import { BrandLockup } from '#/components/brand/BrandLockup'
 import { DitherAvatar, DitherGradient } from '#/components/dither-kit'
 import { Button } from '#/components/ui/button'
+import { TimeZoneProvider } from '#/components/TimeZoneProvider'
 import { authClient } from '#/lib/auth/client'
 import { cn } from '#/lib/utils'
 
@@ -23,7 +25,17 @@ const nav = [
 ] as const
 
 export function DashboardShell({ userName }: { userName: string }) {
+  return (
+    <TimeZoneProvider>
+      <DashboardShellContent userName={userName} />
+    </TimeZoneProvider>
+  )
+}
+
+function DashboardShellContent({ userName }: { userName: string }) {
   const router = useRouter()
+  const { data: session } = authClient.useSession()
+  const currentUserName = session?.user.name ?? userName
 
   async function signOut() {
     await authClient.signOut()
@@ -38,34 +50,40 @@ export function DashboardShell({ userName }: { userName: string }) {
           cell={4}
           className="opacity-75"
           direction="up"
-          from="purple"
+          from="coral"
           opacity={0.12}
         />
         <div className="relative z-10 flex h-full flex-col">
           <Link
-            className="mono flex items-center gap-2 px-3 pb-5 text-xs font-medium text-foreground"
+            aria-label="Ir al resumen de atajo"
+            className="flex items-center px-3 pb-5 text-sm text-foreground"
             to="/dashboard"
           >
-            <span className="grid size-6 place-items-center border border-primary/30 bg-primary/10 text-primary">
-              <Link2 size={13} aria-hidden="true" />
-            </span>
-            Davos Links
+            <BrandLockup markClassName="h-7" />
           </Link>
 
-          <div className="mb-5 flex items-center gap-3 border-y border-border bg-background/75 px-3 py-3">
+          <section
+            aria-label={`Cuenta de ${currentUserName}`}
+            className="mb-5 flex items-center gap-3 rounded-lg border border-blue-100 bg-background/90 p-3"
+          >
             <DitherAvatar
               decorative
               animate
               animationDuration={600}
               bloom="off"
-              className="size-9 shrink-0 border border-primary/20 bg-background"
-              name={userName}
+              className="size-10 shrink-0 border border-blue-200 bg-background ring-2 ring-blue-50"
+              name={currentUserName}
             />
             <div className="min-w-0">
-              <p className="mono text-[0.625rem] text-muted-foreground">CUENTA</p>
-              <p className="mt-0.5 truncate text-sm font-medium">{userName}</p>
+              <p className="mono flex items-center gap-1.5 text-[0.625rem] font-medium tracking-[0.12em] text-blue-700">
+                <span aria-hidden="true" className="size-1.5 bg-blue-500" />
+                CUENTA
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold tracking-[-0.01em]">
+                {currentUserName}
+              </p>
             </div>
-          </div>
+          </section>
 
           <nav aria-label="Navegación principal" className="grid gap-1">
             {nav.map((item) => (
@@ -86,12 +104,11 @@ export function DashboardShell({ userName }: { userName: string }) {
           </nav>
 
           <Button
-            className="mt-auto w-full justify-start"
-            ditherColor="purple"
+            className="mt-auto w-full justify-center"
             ditherVariant="dotted-subtle"
             onClick={signOut}
             type="button"
-            variant="outline"
+            variant="ghost"
           >
             <LogOut aria-hidden="true" />
             Cerrar sesión
@@ -100,20 +117,21 @@ export function DashboardShell({ userName }: { userName: string }) {
       </aside>
       <div className="md:pl-64">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background px-4 md:hidden">
-          <Link className="mono flex items-center gap-2 text-xs font-medium" to="/dashboard">
-            <span className="grid size-7 place-items-center border border-primary/30 bg-primary/10 text-primary">
-              <Link2 size={14} aria-hidden="true" />
-            </span>
-            Davos Links
+          <Link
+            aria-label="Ir al resumen de atajo"
+            className="flex items-center text-sm"
+            to="/dashboard"
+          >
+            <BrandLockup markClassName="h-7" showByline={false} />
           </Link>
           <div className="flex items-center gap-2">
             <DitherAvatar
-              ariaLabel={`Avatar de ${userName}`}
+              ariaLabel={`Avatar de ${currentUserName}`}
               animate
               animationDuration={600}
               bloom="off"
               className="size-8 border border-primary/20 bg-background"
-              name={userName}
+              name={currentUserName}
             />
             <Button asChild size="sm">
               <Link to="/dashboard/links/new">
@@ -162,21 +180,26 @@ export function DashboardShell({ userName }: { userName: string }) {
 }
 
 export function PageHeader({
+  className,
   title,
   detail,
+  meta,
   action,
 }: {
+  className?: string
   title: string
   detail?: string
+  meta?: ReactNode
   action?: ReactNode
 }) {
   return (
-    <div className="mb-7 flex flex-col justify-between gap-4 border-b border-primary/20 pb-5 md:flex-row md:items-end">
+    <div className={cn('mb-7 flex flex-col justify-between gap-4 border-b border-primary/20 pb-5 md:flex-row md:items-end', className)}>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
         {detail ? (
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{detail}</p>
         ) : null}
+        {meta ? <div className="mt-3">{meta}</div> : null}
       </div>
       {action ? <div className={cn('flex shrink-0 gap-2')}>{action}</div> : null}
     </div>
