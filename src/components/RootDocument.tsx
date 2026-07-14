@@ -2,7 +2,7 @@ import { HeadContent, Scripts } from '@tanstack/react-router'
 
 export function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <HeadContent />
       </head>

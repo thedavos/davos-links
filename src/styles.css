@@ -2,24 +2,41 @@
 @import "tailwindcss";
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.141 0.005 285.823);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.141 0.005 285.823);
-  --radius: 0.5rem;
+  /* Tripwire vivid-light palette. Semantic colors are intentionally dark enough
+     for AA text contrast on the off-white surfaces. */
+  --background: #fbfaf6;
+  --foreground: #191724;
+  --card: #ffffff;
+  --card-foreground: #191724;
+  --popover: #ffffff;
+  --popover-foreground: #191724;
+  --primary: #0759d6;
+  --primary-foreground: #ffffff;
+  --secondary: #eee9ff;
+  --secondary-foreground: #4f2bbd;
+  --muted: #f1efe8;
+  --muted-foreground: #625f6d;
+  --accent: #ffe3f0;
+  --accent-foreground: #9b1757;
+  --destructive: #c92832;
+  --destructive-foreground: #ffffff;
+  --success: #147a42;
+  --success-foreground: #ffffff;
+  --warning: #a84700;
+  --warning-foreground: #ffffff;
+  --info: #0759d6;
+  --info-foreground: #ffffff;
+  /* Official Dither Kit fill seeds from the pinned upstream snapshot. */
+  --blue: #358ff3;
+  --purple: #966eff;
+  --pink: #f05abe;
+  --green: #28d26e;
+  --orange: #ff9632;
+  --red: #f04646;
+  --border: #dcd6eb;
+  --input: #9a90aa;
+  --ring: #0759d6;
+  --radius: 0.625rem;
   color-scheme: light;
   font-family:
     "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
@@ -33,6 +50,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -43,6 +62,18 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-blue: var(--blue);
+  --color-purple: var(--purple);
+  --color-pink: var(--pink);
+  --color-green: var(--green);
+  --color-orange: var(--orange);
+  --color-red: var(--red);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -67,6 +98,41 @@ body {
   color: var(--foreground);
 }
 
+::selection {
+  background: color-mix(in srgb, var(--pink) 28%, white);
+  color: var(--foreground);
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* A reusable static 4x4 Bayer field for repeated/compact controls. Canvas
+   effects remain reserved for the larger Dither Kit actions and surfaces. */
+.dither-static {
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, currentColor 18%, transparent) 0 0.75px,
+    transparent 0.9px
+  );
+  background-position: 0 0;
+  background-size: 4px 4px;
+}
+
+.dither-hover {
+  background-image: none;
+}
+
+.dither-hover:is(:hover, :focus-visible) {
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, currentColor 16%, transparent) 0 0.75px,
+    transparent 0.9px
+  );
+  background-size: 4px 4px;
+}
+
 @keyframes notification-enter {
   from {
     opacity: 0;
@@ -80,7 +146,14 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .action-notification {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+
+  .action-notification,
+  [data-dither-motion] {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

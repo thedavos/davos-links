@@ -1,5 +1,7 @@
-import { useRouter } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
+import { ArrowLeft, Link2 } from 'lucide-react'
 import { useState } from 'react'
+import { DitherGradient } from '#/components/dither-kit'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
@@ -29,38 +31,91 @@ export function LoginPage({ redirectTo = '/dashboard' }: { redirectTo?: string }
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-muted px-4">
-      <Card className="w-full max-w-sm bg-background p-6">
-        <form onSubmit={submit}>
-          <p className="mono text-xs text-muted-foreground">Davos Links</p>
-          <h1 className="mt-2 text-2xl font-semibold">Iniciar sesión</h1>
-          <div className="mt-6 grid gap-4">
-            <Label>
-              Correo
-              <Input
-                onChange={(event) => setEmail(event.target.value)}
-                required
-                type="email"
-                value={email}
-              />
-            </Label>
-            <Label>
-              Contraseña
-              <Input
-                minLength={8}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                type="password"
-                value={password}
-              />
-            </Label>
+    <main
+      className="relative grid min-h-dvh overflow-hidden bg-background px-4 py-12 text-foreground sm:px-6"
+      id="main-content"
+    >
+      <DitherGradient
+        bloom="off"
+        cell={4}
+        direction="up"
+        from="purple"
+        opacity={0.16}
+        to="blue"
+      />
+
+      <div className="relative z-10 m-auto w-full max-w-md">
+        <Link
+          className="mono mb-6 inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          to="/"
+        >
+          <ArrowLeft size={14} aria-hidden="true" />
+          Volver a inicio
+        </Link>
+
+        <Card className="border-primary/25 bg-card/95 p-0 shadow-xl shadow-primary/10">
+          <div className="border-b border-border px-6 py-5 sm:px-8">
+            <div className="flex size-10 items-center justify-center border border-primary/30 bg-primary/10 text-primary">
+              <Link2 size={18} aria-hidden="true" />
+            </div>
+            <p className="mono mt-5 text-xs text-primary">Davos Links</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Iniciar sesión</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Accede a tus enlaces, campañas y métricas.
+            </p>
           </div>
-          {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
-          <Button className="mt-6 w-full" disabled={loading} type="submit">
-            {loading ? 'Entrando...' : 'Iniciar sesión'}
-          </Button>
-        </form>
-      </Card>
+
+          <form className="px-6 py-6 sm:px-8 sm:py-7" onSubmit={submit}>
+            <div className="grid gap-5">
+              <Label>
+                Correo
+                <Input
+                  autoComplete="email"
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="tu@correo.com"
+                  required
+                  type="email"
+                  value={email}
+                />
+              </Label>
+              <Label>
+                Contraseña
+                <Input
+                  autoComplete="current-password"
+                  minLength={8}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  type="password"
+                  value={password}
+                />
+              </Label>
+            </div>
+            {error ? (
+              <p
+                className="mt-4 border-l-2 border-destructive bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                role="alert"
+              >
+                {error}
+              </p>
+            ) : null}
+            <Button
+              aria-busy={loading}
+              bloom="low"
+              className="mt-6 w-full"
+              disabled={loading}
+              ditherColor="blue"
+              ditherVariant="gradient"
+              type="submit"
+            >
+              {loading ? 'Entrando...' : 'Iniciar sesión'}
+            </Button>
+          </form>
+        </Card>
+
+        <p className="mono mt-5 text-center text-[0.6875rem] text-muted-foreground">
+          links.davosdo.dev · acceso seguro
+        </p>
+      </div>
     </main>
   )
 }

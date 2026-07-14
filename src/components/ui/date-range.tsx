@@ -35,6 +35,12 @@ export function DateRangePicker({
       <div className="flex gap-1">
         {presets.map((preset) => (
           <Button
+            aria-pressed={isPresetActive(value, preset.days)}
+            className={
+              isPresetActive(value, preset.days)
+                ? 'border-secondary-foreground bg-secondary text-secondary-foreground'
+                : undefined
+            }
             key={preset.label}
             onClick={() => onChange(defaultDateRange(preset.days))}
             size="sm"
@@ -65,4 +71,11 @@ export function DateRangePicker({
 
 function toISOStringDate(date: Date) {
   return date.toISOString().slice(0, 10)
+}
+
+function isPresetActive(value: DateRange, days: number) {
+  const from = Date.parse(`${value.from}T00:00:00.000Z`)
+  const to = Date.parse(`${value.to}T00:00:00.000Z`)
+
+  return Number.isFinite(from) && Number.isFinite(to) && (to - from) / 86_400_000 + 1 === days
 }

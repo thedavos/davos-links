@@ -49,7 +49,7 @@ describe('handlePublicRedirect', () => {
       await (
         await handlePublicRedirect(new Request('https://links.davosdo.dev/railway'))
       ).text(),
-    ).toContain('Link disabled')
+    ).toContain('Enlace desactivado')
 
     mocks.resolveLink.mockResolvedValueOnce({
       link: makeCachedLink({ expires_at: '2020-01-01T00:00:00.000Z' }),
@@ -58,7 +58,7 @@ describe('handlePublicRedirect', () => {
       await (
         await handlePublicRedirect(new Request('https://links.davosdo.dev/railway'))
       ).text(),
-    ).toContain('Link expired')
+    ).toContain('Enlace vencido')
   })
 
   it('redirects expired links to fallback when present', async () => {

@@ -2,6 +2,7 @@ import { Archive, Check, Plus, Save } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { PageHeader } from '#/components/DashboardShell'
+import { DitherAvatar } from '#/components/dither-kit'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
@@ -296,7 +297,19 @@ export function SettingsPage({
       ) : null}
       <div className="mb-6 grid gap-4 md:grid-cols-2">
         <Card className="p-4">
-          <h2 className="text-sm font-medium">Perfil</h2>
+          <div className="flex items-center gap-3">
+            <DitherAvatar
+              decorative
+              animate={false}
+              bloom="low"
+              className="size-11 overflow-hidden rounded-md border border-purple-200 bg-purple-50"
+              name={user?.name || user?.email || 'Davos Links'}
+            />
+            <div>
+              <h2 className="text-sm font-medium">Perfil</h2>
+              <p className="mono mt-1 text-xs text-purple-700">Identidad del operador</p>
+            </div>
+          </div>
           <form className="mt-4 grid gap-4" onSubmit={saveProfile}>
             <Label>
               Nombre

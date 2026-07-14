@@ -45,10 +45,10 @@ export function ActionNotification({
     <section
       aria-atomic="true"
       className={cn(
-        'action-notification fixed right-4 top-4 z-50 flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 border bg-background p-3 text-sm shadow-lg transition-[opacity,transform] duration-150 ease-out motion-safe:animate-[notification-enter_180ms_ease-out]',
+        'action-notification fixed right-4 top-4 z-50 flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-lg border bg-popover p-3 text-sm text-popover-foreground shadow-[0_18px_48px_rgb(40_24_72/0.18)] transition-[opacity,transform] duration-150 ease-out motion-safe:animate-[notification-enter_180ms_ease-out]',
         feedback.kind === 'success'
-          ? 'border-border text-foreground'
-          : 'border-destructive text-destructive',
+          ? 'border-success/45'
+          : 'border-destructive/55',
         isLeaving && 'translate-y-[-0.5rem] opacity-0 motion-safe:animate-none',
         className,
       )}
@@ -59,7 +59,7 @@ export function ActionNotification({
         className={cn(
           'grid size-8 shrink-0 place-items-center border',
           feedback.kind === 'success'
-            ? 'border-foreground bg-foreground text-background'
+            ? 'border-success bg-success text-success-foreground'
             : 'border-destructive bg-destructive text-destructive-foreground',
         )}
       >
@@ -73,7 +73,7 @@ export function ActionNotification({
       </div>
       <button
         aria-label="Cerrar notificación"
-        className="-mr-1 -mt-1 grid size-8 shrink-0 place-items-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="dither-hover -mr-1 -mt-1 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={dismiss}
         type="button"
       >
