@@ -46,8 +46,8 @@ export type OverviewAnalytics = {
   timeZone: string
 }
 
-type RequestState = {
-  data: OverviewAnalytics | null
+type RequestState<T> = {
+  data: T | null
   error: string
   isInitialLoading: boolean
   isUpdating: boolean
@@ -61,8 +61,11 @@ const emptyComparison: AnalyticsComparison = {
   trend: 'flat',
 }
 
-export function useOverviewAnalytics(range: DateRange) {
-  const [requestState, setRequestState] = useState<RequestState>({
+export function useOverviewAnalytics<T extends { range: DateRange } = OverviewAnalytics>(
+  range: DateRange,
+  normalize?: (payload: unknown, requestedRange: DateRange) => T,
+) {
+  const [requestState, setRequestState] = useState<RequestState<T>>({
     data: null,
     error: '',
     isInitialLoading: true,
@@ -83,7 +86,15 @@ export function useOverviewAnalytics(range: DateRange) {
       isUpdating: current.data !== null,
     }))
 
-    void fetchOverviewAnalytics(range, controller.signal)
+    const request: Promise<T> = normalize
+      ? fetchOverviewPayload(range, controller.signal).then((payload) =>
+          normalize(payload, range),
+        )
+      : fetchOverviewAnalytics(range, controller.signal).then(
+          (data) => data as unknown as T,
+        )
+
+    void request
       .then((data) => {
         if (controller.signal.aborted || requestId !== latestRequestId.current)
           return
@@ -106,7 +117,7 @@ export function useOverviewAnalytics(range: DateRange) {
       })
 
     return () => controller.abort()
-  }, [range.from, range.to, retryNonce])
+  }, [range.from, range.to, retryNonce, normalize])
 
   const retry = useCallback(() => setRetryNonce((value) => value + 1), [])
   const hasStaleData = Boolean(
@@ -125,19 +136,8 @@ export async function fetchOverviewAnalytics(
   range: DateRange,
   signal?: AbortSignal,
 ): Promise<OverviewAnalytics> {
-  const params = new URLSearchParams(range)
-  const response = await fetch(`/api/analytics/overview?${params.toString()}`, {
-    signal,
-  })
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`)
-  }
-
-  const payload = (await response.json()) as Partial<OverviewAnalytics> & {
+  const payload = (await fetchOverviewPayload(range, signal)) as Partial<OverviewAnalytics> & {
     timezone?: string
-  }
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('Respuesta analítica inválida')
   }
 
   return {
@@ -156,6 +156,22 @@ export async function fetchOverviewAnalytics(
     previousRange: payload.previousRange ?? previousDateRange(range),
     timeZone: payload.timeZone ?? payload.timezone ?? ANALYTICS_TIME_ZONE,
   }
+}
+
+async function fetchOverviewPayload(range: DateRange, signal?: AbortSignal) {
+  const params = new URLSearchParams(range)
+  const response = await fetch(`/api/analytics/overview?${params.toString()}`, {
+    signal,
+  })
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+
+  const payload = (await response.json()) as unknown
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Respuesta analítica inválida')
+  }
+  return payload
 }
 
 function errorMessage(error: unknown) {

@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Activity, Download, Plus, RefreshCw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ComparisonTrendChart, type ChartPoint } from '#/components/Charts'
 import { PageHeader } from '#/components/DashboardShell'
 import { Button } from '#/components/ui/button'
@@ -14,6 +14,7 @@ import {
 import type { AnalyticsBreakdowns } from '#/lib/types'
 import { cn } from '#/lib/utils'
 import { TrafficBreakdowns } from './TrafficBreakdowns'
+import { useOverviewAnalytics } from './useOverviewAnalytics'
 
 type AnalyticsComparison = {
   currentClicks: number
@@ -53,45 +54,19 @@ type Overview = {
 type UnknownRecord = Record<string, unknown>
 
 export function OverviewPage() {
-  const [overview, setOverview] = useState<Overview | null>(null)
   const [range, setRange] = useState<DateRange>(() => defaultDateRange(30))
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [retryKey, setRetryKey] = useState(0)
+  const {
+    data: overview,
+    error,
+    hasStaleData,
+    isInitialLoading,
+    isUpdating,
+    retry,
+  } = useOverviewAnalytics(range, normalizeOverview)
 
-  useEffect(() => {
-    const controller = new AbortController()
-
-    async function loadOverview() {
-      setLoading(true)
-      setError('')
-      try {
-        const params = new URLSearchParams(range)
-        const response = await fetch(`/api/analytics/overview?${params.toString()}`, {
-          signal: controller.signal,
-        })
-        if (!response.ok) throw new Error('Analytics request failed')
-        const payload = (await response.json()) as unknown
-        if (!controller.signal.aborted) setOverview(normalizeOverview(payload, range))
-      } catch (requestError) {
-        if (
-          !controller.signal.aborted &&
-          !(requestError instanceof DOMException && requestError.name === 'AbortError')
-        ) {
-          setError('No se pudieron cargar las métricas de este periodo.')
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
-      }
-    }
-
-    void loadOverview()
-    return () => controller.abort()
-  }, [range, retryKey])
-
-  const effectiveRange = !loading && !error && overview ? overview.range : range
+  const effectiveRange = overview?.range ?? range
   const exportQuery = new URLSearchParams(range)
-  const rangeContext = !loading && !error && overview
+  const rangeContext = overview
     ? `${formatRange(overview.range)} · comparado con ${formatRange(overview.previousRange)} · ${overview.timezone}`
     : `${formatRange(range)} · UTC`
 
@@ -132,7 +107,7 @@ export function OverviewPage() {
           role="alert"
         >
           <span>{error}</span>
-          <Button onClick={() => setRetryKey((value) => value + 1)} size="sm" variant="destructive">
+          <Button onClick={retry} size="sm" variant="destructive">
             <RefreshCw aria-hidden="true" size={14} />
             Reintentar
           </Button>
@@ -140,12 +115,20 @@ export function OverviewPage() {
       ) : null}
 
       <div aria-atomic="true" aria-live="polite" className="sr-only" role="status">
-        {loading ? 'Actualizando métricas' : `Métricas actualizadas para ${formatRange(effectiveRange)}`}
+        {isInitialLoading || isUpdating
+          ? 'Actualizando métricas'
+          : `Métricas actualizadas para ${formatRange(effectiveRange)}`}
       </div>
 
-      {loading ? (
+      {hasStaleData ? (
+        <p className="mb-3 text-xs text-muted-foreground" role="status">
+          Mostrando el periodo anterior mientras se actualizan las métricas.
+        </p>
+      ) : null}
+
+      {isInitialLoading ? (
         <OverviewSkeleton />
-      ) : !error && overview ? (
+      ) : overview ? (
         <div>
           <PerformanceMetrics overview={overview} />
           <CurrentStatus activeLinks={overview.totals.activeLinksNow} />
@@ -183,7 +166,7 @@ export function OverviewPage() {
             <TrafficBreakdowns
               breakdowns={overview.breakdowns}
               loading={false}
-              onRetry={() => setRetryKey((value) => value + 1)}
+              onRetry={retry}
             />
           ) : null}
         </div>
@@ -396,14 +379,23 @@ export function normalizeOverview(payload: unknown, requestedRange: DateRange): 
   const botClicks = numberFrom(totals.botClicks, sumBotClicks(series))
   const days = inclusiveDays(range)
   const rawTopLinks = Array.isArray(root.topLinks) ? root.topLinks : []
-  const comparisonRecord = asRecord(root.comparison)
+  const comparisonRoot = asRecord(root.comparison)
+  const comparisonRecord = Object.keys(asRecord(comparisonRoot.humanClicks)).length
+    ? asRecord(comparisonRoot.humanClicks)
+    : comparisonRoot
   const previousClicks = numberFrom(
     comparisonRecord.previousClicks,
     sumHumanClicks(previousSeries),
   )
   const currentClicks = numberFrom(comparisonRecord.currentClicks, humanClicks)
-  const delta = numberFrom(comparisonRecord.delta, currentClicks - previousClicks)
-  const hasPreviousBase = previousClicks > 0 && !isMissingBaseline(comparisonRecord)
+  const delta = numberFrom(
+    comparisonRecord.absolute,
+    comparisonRecord.delta,
+    currentClicks - previousClicks,
+  )
+  const hasPreviousBase =
+    comparisonRecord.status === 'comparable' ||
+    (previousClicks > 0 && !isMissingBaseline(comparisonRecord))
 
   return {
     totals: {
@@ -414,7 +406,7 @@ export function normalizeOverview(payload: unknown, requestedRange: DateRange): 
         totals.averageDailyHumanClicks,
         days ? humanClicks / days : 0,
       ),
-      activeLinksNow: numberFrom(totals.activeLinksNow, totals.activeLinks),
+      activeLinksNow: numberFrom(root.activeLinksNow, totals.activeLinksNow, totals.activeLinks),
     },
     series,
     previousSeries,
@@ -423,7 +415,11 @@ export function normalizeOverview(payload: unknown, requestedRange: DateRange): 
       previousClicks,
       delta,
       deltaPercent: hasPreviousBase
-        ? numberFrom(comparisonRecord.deltaPercent, (delta / previousClicks) * 100)
+        ? numberFrom(
+            comparisonRecord.percent,
+            comparisonRecord.deltaPercent,
+            (delta / previousClicks) * 100,
+          )
         : null,
       hasPreviousBase,
     },
@@ -449,8 +445,17 @@ function normalizeTopLink(value: unknown): TopLink {
     shortPath: stringFrom(link.shortPath, link.short_path),
     humanClicks: numberFrom(link.humanClicks, link.clicks),
     sharePercent: numberFrom(link.sharePercent),
-    delta: link.delta === null || link.delta === undefined ? null : numberFrom(link.delta),
+    delta: normalizeDelta(link.delta),
   }
+}
+
+function normalizeDelta(value: unknown) {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'object') {
+    const delta = asRecord(value)
+    return delta.status === 'comparable' ? numberFrom(delta.absolute) : null
+  }
+  return numberFrom(value)
 }
 
 function normalizeSeries(value: unknown): ChartPoint[] {
