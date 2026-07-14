@@ -1,30 +1,40 @@
 <p align="center">
-  <img src="public/brand-mark.svg" alt="Logo de atajo" width="120">
+  <img src="public/brand-mark.svg" alt="atajo logo" width="120">
 </p>
 
 # atajo
 
 **atajo by davosdo** — _La ruta corta._
 
-atajo es un acortador de URLs autohospedado y nativo de Cloudflare. El producto
-público usa la marca **atajo**; `davos-links` se conserva como nombre técnico del
-proyecto y de su infraestructura.
+atajo is a self-hosted, Cloudflare-native URL shortener. The public product uses
+the **atajo** brand, while `davos-links` remains the technical name of the project
+and its infrastructure.
 
-## Funcionalidades
+## Screenshots
 
-- Creación, edición, activación, desactivación y archivado de enlaces cortos.
-- Rutas públicas configurables con validación de nombres reservados.
-- Dashboard protegido con autenticación por correo y contraseña.
-- Organización mediante tags y campañas.
-- Analíticas generales y por enlace, con comparaciones por periodo.
-- Desgloses por país, referente y dispositivo.
-- Exportación de analíticas en CSV.
-- Resolución rápida de enlaces mediante KV, con D1 como fuente canónica.
-- Telemetría de clics en Workers Analytics Engine sin bloquear la redirección.
+### Landing page
+
+![atajo landing page](docs/screenshots/atajo-landing-page.png)
+
+### Analytics dashboard
+
+![atajo analytics dashboard](docs/screenshots/atajo-analytics-dashboard.png)
+
+## Features
+
+- Create, edit, activate, deactivate, and archive short links.
+- Configurable public paths with reserved-name validation.
+- Protected dashboard with email and password authentication.
+- Organization through tags and campaigns.
+- Overall and per-link analytics with period comparisons.
+- Breakdowns by country, referrer, and device.
+- CSV analytics exports.
+- Fast link resolution through KV, with D1 as the canonical data source.
+- Click telemetry through Workers Analytics Engine without blocking redirects.
 
 ## Stack
 
-- TanStack Start, TanStack Router, React y TypeScript
+- TanStack Start, TanStack Router, React, and TypeScript
 - Tailwind CSS
 - Cloudflare Workers
 - Cloudflare D1
@@ -33,64 +43,63 @@ proyecto y de su infraestructura.
 - Better Auth
 - Wrangler
 
-## Requisitos
+## Requirements
 
-Antes de comenzar necesitas:
+Before getting started, you need:
 
-- Node.js compatible con las dependencias del proyecto.
-- [pnpm](https://pnpm.io/) 11 o posterior.
-- Una cuenta de Cloudflare con acceso a Workers.
-- Wrangler autenticado mediante `pnpm exec wrangler login`.
-- Una base de datos D1.
-- Un namespace de KV.
-- Un dataset de Workers Analytics Engine.
-- Un dominio o subdominio dirigido al Worker para producción.
+- A Node.js version compatible with the project dependencies.
+- [pnpm](https://pnpm.io/) 11 or later.
+- A Cloudflare account with access to Workers.
+- Wrangler authenticated through `pnpm exec wrangler login`.
+- A D1 database.
+- A KV namespace.
+- A Workers Analytics Engine dataset.
+- A domain or subdomain routed to the Worker for production.
 
-## Arquitectura
+## Architecture
 
-D1 almacena los datos canónicos de autenticación, workspaces, dominios,
-enlaces, tags, campañas, claves API y métricas diarias. KV mantiene payloads
-compactos para resolver redirecciones con la clave
-`link:${host}:${short_path_normalized}`.
+D1 stores the canonical authentication, workspace, domain, link, tag, campaign,
+API key, and daily metrics data. KV keeps compact payloads for resolving
+redirects under the `link:${host}:${short_path_normalized}` key.
 
-El flujo de una redirección pública es:
+The public redirect flow is:
 
-1. Interpretar y normalizar el host y la ruta solicitada.
-2. Rechazar rutas internas o reservadas.
-3. Consultar el enlace en KV.
-4. Consultar D1 si no existe una entrada en caché.
-5. Guardar en KV los enlaces activos con un TTL.
-6. Respetar enlaces inactivos, archivados, vencidos y su comportamiento de fallback.
-7. Registrar la telemetría con `ctx.waitUntil()`.
-8. Responder con el tipo de redirección configurado en el enlace.
+1. Parse and normalize the requested host and path.
+2. Reject internal or reserved paths.
+3. Look up the link in KV.
+4. Query D1 when no cached entry exists.
+5. Cache active links in KV with a TTL.
+6. Respect inactive, archived, and expired links and their fallback behavior.
+7. Record telemetry with `ctx.waitUntil()`.
+8. Respond using the redirect type configured for the link.
 
-El dashboard consume rutas `/api/*` protegidas. Los bindings de Cloudflare y la
-sesión de Better Auth permanecen exclusivamente en el servidor.
+The dashboard consumes protected `/api/*` routes. Cloudflare bindings and the
+Better Auth session remain exclusively on the server.
 
-## Configuración
+## Configuration
 
-### 1. Instalar dependencias
+### 1. Install dependencies
 
 ```bash
 pnpm install
 ```
 
-### 2. Crear los recursos de Cloudflare
+### 2. Create the Cloudflare resources
 
-Puedes crearlos desde el dashboard de Cloudflare o con Wrangler:
+You can create them from the Cloudflare dashboard or with Wrangler:
 
 ```bash
 pnpm exec wrangler d1 create <D1_DATABASE_NAME>
 pnpm exec wrangler kv namespace create <KV_NAMESPACE_NAME>
 ```
 
-Analytics Engine crea el dataset cuando el Worker comienza a escribir datos;
-solo debes declarar un nombre de dataset en `wrangler.jsonc`.
+Analytics Engine creates the dataset when the Worker starts writing data; you
+only need to declare a dataset name in `wrangler.jsonc`.
 
-### 3. Configurar `wrangler.jsonc`
+### 3. Configure `wrangler.jsonc`
 
-Reemplaza los valores de la instalación incluida en el repositorio por los de
-tu entorno:
+Replace the values from the installation included in the repository with those
+from your environment:
 
 ```jsonc
 {
@@ -122,60 +131,59 @@ tu entorno:
 }
 ```
 
-No cambies los nombres de los bindings sin actualizar también el código y los
-tipos generados. Si usas otro nombre para la base D1, actualiza los scripts
-`db:migrate`, `db:migrate:local` y `db:seed-demo:local`, que actualmente apuntan
-al nombre técnico predeterminado del repositorio.
+Do not rename the bindings without updating the code and generated types as
+well. If you use a different D1 database name, update the `db:migrate`,
+`db:migrate:local`, and `db:seed-demo:local` scripts, which currently point to
+the repository's default technical name.
 
-### 4. Configurar variables locales
+### 4. Configure local variables
 
-Copia el archivo de ejemplo:
+Copy the example file:
 
 ```bash
 cp .dev.vars.example .dev.vars
 ```
 
-Configura `.dev.vars` sin incorporarlo al control de versiones:
+Configure `.dev.vars` without committing it to version control:
 
 ```dotenv
 BETTER_AUTH_SECRET="<RANDOM_SECRET>"
 BETTER_AUTH_URL="http://localhost:3000"
 ANALYTICS_DATA_SOURCE="demo"
 
-# Requeridos para consultar Analytics Engine en lugar de los datos demo.
+# Required to query Analytics Engine instead of demo data.
 CLOUDFLARE_ACCOUNT_ID="<CLOUDFLARE_ACCOUNT_ID>"
 ANALYTICS_ENGINE_API_TOKEN="<ANALYTICS_ENGINE_API_TOKEN>"
 ```
 
-| Variable o binding | Finalidad | Requerido |
+| Variable or binding | Purpose | Required |
 | --- | --- | --- |
-| `LINKS_DB` | Datos canónicos y base de Better Auth en D1. | Siempre |
-| `SHORT_LINK_CACHE` | Caché KV de las redirecciones públicas. | Siempre |
-| `CLICK_ANALYTICS` | Escritura de eventos en Analytics Engine. | Siempre |
-| `BETTER_AUTH_SECRET` | Firma y protección de las sesiones. Debe ser un secreto aleatorio robusto. | Siempre; como secreto en producción |
-| `BETTER_AUTH_URL` | Origen público de la aplicación y de Better Auth. | Siempre |
-| `ANALYTICS_DATA_SOURCE` | Usa `demo` para desgloses locales; cualquier otro valor consulta Analytics Engine. | Opcional; recomendado en local |
-| `CLOUDFLARE_ACCOUNT_ID` | Cuenta utilizada para consultar la API de Analytics Engine. | Solo para analíticas reales |
-| `ANALYTICS_ENGINE_API_TOKEN` | Token con permiso de lectura de Account Analytics. | Solo para analíticas reales; como secreto |
+| `LINKS_DB` | Canonical application data and Better Auth database in D1. | Always |
+| `SHORT_LINK_CACHE` | KV cache for public redirects. | Always |
+| `CLICK_ANALYTICS` | Analytics Engine event writes. | Always |
+| `BETTER_AUTH_SECRET` | Signs and protects sessions. It must be a strong random secret. | Always; store as a production secret |
+| `BETTER_AUTH_URL` | Public origin for the application and Better Auth. | Always |
+| `ANALYTICS_DATA_SOURCE` | Use `demo` for local breakdowns; any other value queries Analytics Engine. | Optional; recommended locally |
+| `CLOUDFLARE_ACCOUNT_ID` | Account used to query the Analytics Engine API. | Real analytics only |
+| `ANALYTICS_ENGINE_API_TOKEN` | Token with Account Analytics read access. | Real analytics only; store as a secret |
 
-El modo `demo` solo está permitido en orígenes locales y obtiene de D1 los
-desgloses sembrados. Los totales y series temporales del dashboard también se
-calculan a partir de D1.
+`demo` mode is only allowed on local origins and reads seeded breakdowns from
+D1. Dashboard totals and time series are also calculated from D1.
 
-### 5. Adaptar dominio y datos predeterminados
+### 5. Adapt the domain and default data
 
-Esta versión todavía conserva algunos valores de la instalación original fuera
-de `wrangler.jsonc`. Antes de desplegar una instancia propia, revisa:
+This version still retains some values from the original installation outside
+`wrangler.jsonc`. Before deploying your own instance, review:
 
-- `src/lib/constants.ts`: origen público, dominio, workspace y dominio predeterminados.
-- `src/lib/auth/server.ts`: `trustedOrigins`, fallback local y prefijo de cookies.
-- `migrations/0001_initial_schema.sql`: workspace y dominio insertados inicialmente.
-- `scripts/seed-demo-local.mjs` y `scripts/seed-demo-data.sql`: usuario y contenido demo.
+- `src/lib/constants.ts`: public origin, domain, workspace, and default domain.
+- `src/lib/auth/server.ts`: `trustedOrigins`, local fallback, and cookie prefix.
+- `migrations/0001_initial_schema.sql`: initially inserted workspace and domain.
+- `scripts/seed-demo-local.mjs` and `scripts/seed-demo-data.sql`: demo user and content.
 
-Usa el mismo host en `BETTER_AUTH_URL`, los orígenes confiables, el dominio
-predeterminado y la ruta de producción del Worker.
+Use the same host in `BETTER_AUTH_URL`, trusted origins, the default domain, and
+the Worker's production route.
 
-### 6. Preparar y ejecutar el entorno local
+### 6. Prepare and run the local environment
 
 ```bash
 pnpm cf-typegen
@@ -184,96 +192,95 @@ pnpm db:seed-demo:local
 pnpm dev
 ```
 
-El script de seed crea un usuario local y muestra sus credenciales en la
-terminal. Cámbialas dentro del script antes de usarlo si no quieres emplear los
-valores demo incluidos en el repositorio.
+The seed script creates a local user and prints its credentials in the terminal.
+Change them in the script before running it if you do not want to use the demo
+values included in the repository.
 
-## Autenticación y usuario inicial
+## Authentication and initial user
 
-Better Auth atiende en `/api/auth/*`. El inicio de sesión con correo y
-contraseña está habilitado, pero el registro público está desactivado. Por ello,
-debes crear intencionalmente al menos un usuario mediante uno de estos métodos:
+Better Auth is served at `/api/auth/*`. Email and password sign-in is enabled,
+but public registration is disabled. You must therefore intentionally create at
+least one user through one of these methods:
 
-- Ejecutar `pnpm db:seed-demo:local` para desarrollo local.
-- Adaptar el script de seed para crear tus propias credenciales.
-- Insertar un usuario y una cuenta de credenciales mediante un proceso
-  administrativo seguro que genere un hash compatible con Better Auth.
+- Run `pnpm db:seed-demo:local` for local development.
+- Adapt the seed script to create your own credentials.
+- Insert a user and credential account through a secure administrative process
+  that generates a Better Auth-compatible hash.
 
-No copies usuarios demo a producción ni almacenes contraseñas en texto plano.
+Do not copy demo users to production or store passwords in plain text.
 
 ## Scripts
 
-| Comando | Descripción |
+| Command | Description |
 | --- | --- |
-| `pnpm dev` | Inicia el servidor de desarrollo de Vite. |
-| `pnpm generate-routes` | Regenera el árbol de rutas de TanStack Router. |
-| `pnpm typecheck` | Ejecuta TypeScript sin emitir archivos. |
-| `pnpm build` | Compila la aplicación y ejecuta el typecheck estricto. |
-| `pnpm preview` | Previsualiza el build localmente. |
-| `pnpm test` | Ejecuta Vitest con cobertura. |
-| `pnpm test:watch` | Ejecuta Vitest en modo interactivo. |
-| `pnpm deploy` | Compila y despliega el Worker con Wrangler. |
-| `pnpm cf-typegen` | Regenera los tipos de bindings de Cloudflare. |
-| `pnpm db:migrate:local` | Aplica las migraciones de D1 en local. |
-| `pnpm db:seed-demo:local` | Crea el usuario y los datos demo locales. |
-| `pnpm db:migrate` | Aplica las migraciones a la base D1 remota. |
-| `pnpm ui:detect` | Ejecuta el detector visual de Impeccable. |
+| `pnpm dev` | Start the Vite development server. |
+| `pnpm generate-routes` | Regenerate the TanStack Router route tree. |
+| `pnpm typecheck` | Run TypeScript without emitting files. |
+| `pnpm build` | Build the application and run strict type checking. |
+| `pnpm preview` | Preview the build locally. |
+| `pnpm test` | Run Vitest with coverage. |
+| `pnpm test:watch` | Run Vitest in interactive mode. |
+| `pnpm deploy` | Build and deploy the Worker with Wrangler. |
+| `pnpm cf-typegen` | Regenerate Cloudflare binding types. |
+| `pnpm db:migrate:local` | Apply D1 migrations locally. |
+| `pnpm db:seed-demo:local` | Create the local demo user and data. |
+| `pnpm db:migrate` | Apply migrations to the remote D1 database. |
+| `pnpm ui:detect` | Run the Impeccable visual detector. |
 
-Ejecuta `pnpm generate-routes` después de agregar o cambiar rutas.
+Run `pnpm generate-routes` after adding or changing routes.
 
-## Rutas principales
+## Main routes
 
-### Aplicación
+### Application
 
-- `/`: presentación pública.
-- `/login`: inicio de sesión.
-- `/dashboard`: resumen de actividad.
-- `/dashboard/links`: listado de enlaces.
-- `/dashboard/links/new`: creación de enlaces.
-- `/dashboard/links/:id`: detalle y analíticas de un enlace.
-- `/dashboard/links/:id/edit`: edición de un enlace.
-- `/dashboard/tags`: gestión de tags.
-- `/dashboard/campaigns`: gestión de campañas.
-- `/dashboard/settings`: configuración.
-- `/:shortPath`: redirección pública.
+- `/`: public landing page.
+- `/login`: sign-in page.
+- `/dashboard`: activity overview.
+- `/dashboard/links`: link list.
+- `/dashboard/links/new`: link creation.
+- `/dashboard/links/:id`: link details and analytics.
+- `/dashboard/links/:id/edit`: link editing.
+- `/dashboard/tags`: tag management.
+- `/dashboard/campaigns`: campaign management.
+- `/dashboard/settings`: settings.
+- `/:shortPath`: public redirect.
 
 ### API
 
 - `/api/auth/*`
-- `/api/links`, `/api/links/check-path` y `/api/links/:id`
-- `/api/links/:id/disable` y `/api/links/:id/archive`
-- `/api/links/:id/tags` y `/api/links/:id/campaigns`
+- `/api/links`, `/api/links/check-path`, and `/api/links/:id`
+- `/api/links/:id/disable` and `/api/links/:id/archive`
+- `/api/links/:id/tags` and `/api/links/:id/campaigns`
 - `/api/links/:id/analytics`
-- `/api/tags` y `/api/tags/:id`
-- `/api/campaigns` y `/api/campaigns/:id`
+- `/api/tags` and `/api/tags/:id`
+- `/api/campaigns` and `/api/campaigns/:id`
 - `/api/analytics/overview`
 - `/api/analytics/export.csv`
 - `/health`
 
-Las rutas `dashboard`, `api`, `health`, `assets`, `_build`, `_static`,
+The paths `dashboard`, `api`, `health`, `assets`, `_build`, `_static`,
 `favicon.ico`, `robots.txt`, `sitemap.xml`, `login`, `logout`, `register`,
-`settings`, `admin` y `app` no se pueden usar como rutas cortas. También se
-rechazan las rutas que comienzan con `dashboard/`, `api/`, `assets/`, `_build/`
-o `_static/`.
+`settings`, `admin`, and `app` cannot be used as short paths. Paths beginning
+with `dashboard/`, `api/`, `assets/`, `_build/`, or `_static/` are also rejected.
 
-## Despliegue
+## Deployment
 
-1. Configura el dominio, D1, KV y Analytics Engine en `wrangler.jsonc`.
-2. Adapta los valores predeterminados descritos en la sección de configuración.
-3. Genera un secreto fuerte y guárdalo en Cloudflare:
+1. Configure the domain, D1, KV, and Analytics Engine in `wrangler.jsonc`.
+2. Adapt the defaults described in the configuration section.
+3. Generate a strong secret and store it in Cloudflare:
 
    ```bash
    pnpm exec wrangler secret put BETTER_AUTH_SECRET
    ```
 
-4. Para consultar Analytics Engine, crea un token de API limitado a la cuenta
-   con permiso `Account > Account Analytics > Read` y guárdalo:
+4. To query Analytics Engine, create an API token scoped to the account with
+   `Account > Account Analytics > Read` permission and store it:
 
    ```bash
    pnpm exec wrangler secret put ANALYTICS_ENGINE_API_TOKEN
    ```
 
-5. Genera los tipos, migra D1, valida y despliega:
+5. Generate types, migrate D1, validate, and deploy:
 
    ```bash
    pnpm cf-typegen
@@ -282,27 +289,27 @@ o `_static/`.
    pnpm deploy
    ```
 
-6. Configura la ruta o el dominio personalizado del Worker en Cloudflare y
-   verifica `/health`, el login y una redirección antes de compartir la instancia.
+6. Configure the Worker's custom route or domain in Cloudflare, then verify
+   `/health`, sign-in, and a redirect before sharing the instance.
 
-## Diseño y marca
+## Design and brand
 
-La identidad pública es **atajo by davosdo**, con el lema _La ruta corta._ y
-una marca geométrica en forma de A. La interfaz es clara, compacta y orientada a
-herramientas para desarrolladores, con tipografías sans y mono, superficies
-cálidas, azul atajo y coral de ruta. El sistema mantiene contraste WCAG AA,
-foco visible y soporte para movimiento reducido.
+The public identity is **atajo by davosdo**, with the _La ruta corta._ tagline
+and a geometric A mark. The interface is light, compact, and developer-tool
+oriented, with sans and mono typefaces, warm surfaces, atajo blue, and route
+coral. The system maintains WCAG AA contrast, visible focus states, and reduced
+motion support.
 
-El subconjunto de Dither Kit incluido en `src/components/dither-kit/` conserva
-su referencia de procedencia en `src/components/dither-kit/UPSTREAM.md`.
+The Dither Kit subset included in `src/components/dither-kit/` retains its
+provenance reference in `src/components/dither-kit/UPSTREAM.md`.
 
-## Limitaciones actuales
+## Current limitations
 
-- Los desgloses de Analytics Engine están sujetos a la retención y límites de la
-  plataforma de Cloudflare.
-- La instancia parte de un único workspace y dominio predeterminados; no existe
-  todavía un flujo público de onboarding multi-tenant.
-- El registro público está deshabilitado y la creación de usuarios requiere un
-  proceso administrativo.
-- Cambiar los nombres técnicos de bindings o recursos exige actualizar la
-  configuración, los scripts y los tipos generados de forma coordinada.
+- Analytics Engine breakdowns are subject to Cloudflare platform retention and
+  limits.
+- The instance starts with a single default workspace and domain; there is no
+  public multi-tenant onboarding flow yet.
+- Public registration is disabled, and user creation requires an administrative
+  process.
+- Changing technical binding or resource names requires coordinated updates to
+  the configuration, scripts, and generated types.
