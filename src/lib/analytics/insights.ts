@@ -117,7 +117,7 @@ async function getCloudflareHeatmap(
 
   try {
     const zone = escapeSqlString(timeZone)
-    const localTimestamp = `toDateTime(formatDateTime(timestamp, '%Y-%m-%d %H:%M:%S', '${zone}'))`
+    const localTimestamp = `toDateTime(formatDateTime(timestamp, '%Y-%m-%d %H:%i:%S', '${zone}'))`
     const rows = await queryAnalyticsEngine(
       credentials,
       `SELECT
