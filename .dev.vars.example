@@ -1,0 +1,7 @@
+BETTER_AUTH_SECRET="replace-with-a-random-secret"
+BETTER_AUTH_URL="http://localhost:3000"
+ANALYTICS_DATA_SOURCE="demo"
+
+# Only required when ANALYTICS_DATA_SOURCE="cloudflare".
+CLOUDFLARE_ACCOUNT_ID=""
+ANALYTICS_ENGINE_API_TOKEN=""

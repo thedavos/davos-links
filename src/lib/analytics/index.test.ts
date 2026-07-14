@@ -74,6 +74,16 @@ describe('analytics helpers', () => {
       os: 'Other',
       device: 'Desktop',
     })
+    expect(parseUserAgent('Mozilla/5.0 (Linux; Android 14; Tablet) Safari')).toEqual({
+      browser: 'Safari',
+      os: 'Android',
+      device: 'Tablet',
+    })
+    expect(parseUserAgent('')).toEqual({
+      browser: 'Other',
+      os: 'Other',
+      device: 'Unknown',
+    })
   })
 
   it('writes compact click analytics and updates daily aggregates', async () => {
@@ -160,6 +170,11 @@ describe('analytics helpers', () => {
       },
       range: { from: '2026-06-08', to: '2026-07-07' },
       previousRange: { from: '2026-05-09', to: '2026-06-07' },
+      breakdowns: {
+        status: 'unavailable',
+        reason: 'not_configured',
+        source: 'analytics_engine',
+      },
     })
     expect(linkAnalytics.series).toHaveLength(30)
     expect(linkAnalytics.series.at(-1)).toEqual({

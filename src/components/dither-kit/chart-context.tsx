@@ -1,7 +1,7 @@
 import type { ScaleLinear } from "d3-scale"
 import { createContext, use, useCallback, useMemo, useState } from "react"
 import type { CommonChart } from "./common-context"
-import type { BloomInput } from "./dither-paint"
+import type { BloomInput, SparkleMode } from "./dither-paint"
 import type { DitherColor, Seed } from "./palette"
 import { seedOfColor } from "./palette"
 import {
@@ -83,7 +83,9 @@ export type ChartContextValue = {
   hovered: boolean // parent-driven hover (e.g. the whole card) — lifts the fill
   bloom: BloomInput // glow on the dither canvas
   bloomOnHover: boolean // only bloom while hovered
-  sparkles: boolean // decorative star field for continuous charts
+  sparkles: SparkleMode // decorative star field behavior
+  sparkleRevision: number // advances once per interaction-triggered burst
+  triggerSparkles: () => void
 
   // Series register themselves so the canvas knows what (and how) to paint.
   seriesSpecs: Record<string, SeriesSpec>
@@ -189,7 +191,7 @@ export function useChartController({
   hovered = false,
   bloom = "off",
   bloomOnHover = false,
-  sparkles = true,
+  sparkles = "off",
   defaultSelectedDataKey = null,
   onSelectionChange,
 }: {
@@ -206,7 +208,7 @@ export function useChartController({
   hovered?: boolean
   bloom?: BloomInput
   bloomOnHover?: boolean
-  sparkles?: boolean
+  sparkles?: SparkleMode
   defaultSelectedDataKey?: string | null
   onSelectionChange?: (key: string | null) => void
 }): ChartContextValue {
@@ -230,7 +232,12 @@ export function useChartController({
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const [cursorX, setCursorX] = useState(0)
   const [isMouseInChart, setMouseInChart] = useState(false)
+  const [sparkleRevision, setSparkleRevision] = useState(0)
   const [seriesSpecs, setSeriesSpecs] = useState<Record<string, SeriesSpec>>({})
+
+  const triggerSparkles = useCallback(() => {
+    if (sparkles === "burst") setSparkleRevision((value) => value + 1)
+  }, [sparkles])
 
   // useCallback because the series effects in area.tsx/bar.tsx list these as
   // deps — without stable identities the unregister/register effect re-fires
@@ -449,6 +456,8 @@ export function useChartController({
       bloom,
       bloomOnHover,
       sparkles,
+      sparkleRevision,
+      triggerSparkles,
       seriesSpecs,
       registerSeries,
       unregisterSeries,
@@ -492,6 +501,8 @@ export function useChartController({
       bloom,
       bloomOnHover,
       sparkles,
+      sparkleRevision,
+      triggerSparkles,
       seriesSpecs,
       registerSeries,
       unregisterSeries,

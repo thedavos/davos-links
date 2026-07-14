@@ -16,6 +16,8 @@ import { DashboardShell, PageHeader } from '#/components/DashboardShell'
 import { DitherAvatar } from '#/components/dither-kit'
 import { Button } from '#/components/ui/button'
 import { ActionNotification } from '#/components/ui/feedback'
+import { InfoTooltip } from '#/components/ui/info-tooltip'
+import { SegmentedControl } from '#/components/ui/segmented-control'
 import { LoginPage } from '#/features/auth/LoginPage'
 import { HomePage } from '#/features/home/HomePage'
 import { LinkDetailPage } from '#/features/dashboard/LinkDetailPage'
@@ -120,6 +122,18 @@ describe('public and shared UI', () => {
     expect(screen.getByText('Sin datos')).toBeInTheDocument()
 
     rerender(
+      <MetricSparkline
+        data={[{ metric_date: '2026-07-07', clicks: 10 }]}
+        label="Sparkline de clics"
+      />,
+    )
+    expect(
+      document.querySelector(
+        '[data-chart-label="Sparkline de clics"] [data-chart-animation]',
+      ),
+    ).toHaveAttribute('data-chart-animation', 'off')
+
+    rerender(
       <ComparisonTrendChart
         current={[
           { metric_date: '2026-07-06', clicks: 5 },
@@ -131,6 +145,19 @@ describe('public and shared UI', () => {
         ]}
       />,
     )
+    const currentView = screen.getByRole('button', {
+      name: 'Mostrar solo el periodo actual',
+    })
+    const compareView = screen.getByRole('button', {
+      name: 'Comparar con el periodo anterior',
+    })
+    expect(currentView).toHaveAttribute('aria-pressed', 'true')
+    expect(compareView).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByText('Periodo anterior')).not.toBeInTheDocument()
+
+    fireEvent.click(compareView)
+    expect(currentView).toHaveAttribute('aria-pressed', 'false')
+    expect(compareView).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Periodo anterior')).toBeInTheDocument()
     const currentLegend = screen.getByRole('button', { name: 'Actual' })
     expect(currentLegend).toHaveAttribute('aria-pressed', 'false')
@@ -139,6 +166,8 @@ describe('public and shared UI', () => {
     const comparison = screen.getByRole('group', {
       name: /Clics en el tiempo comparados/i,
     })
+    expect(comparison).toHaveAttribute('data-chart-animation', 'off')
+    expect(comparison).toHaveAttribute('data-chart-sparkles', 'burst')
     fireEvent.focus(comparison)
     expect(screen.getByRole('status')).toHaveTextContent(
       /07 jul.*10 clics actuales.*4 del periodo anterior/i,
@@ -150,6 +179,14 @@ describe('public and shared UI', () => {
     fireEvent.keyDown(comparison, { key: 'Escape' })
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
 
+    fireEvent.click(currentView)
+    const currentChart = screen.getByRole('group', {
+      name: /Clics en el tiempo del periodo actual/i,
+    })
+    fireEvent.focus(currentChart)
+    expect(screen.getByRole('status')).toHaveTextContent(/07 jul.*10 clics actuales/i)
+    expect(screen.getByRole('status')).not.toHaveTextContent(/periodo anterior/i)
+
     rerender(
       <DailyActivityBarChart
         data={[
@@ -160,6 +197,8 @@ describe('public and shared UI', () => {
     )
     expect(screen.getByText('Una barra por fecha')).toBeInTheDocument()
     const activity = screen.getByRole('group', { name: 'Actividad diaria de clics' })
+    expect(activity).toHaveAttribute('data-chart-animation', 'off')
+    expect(activity).toHaveAttribute('data-chart-sparkles', 'burst')
     fireEvent.focus(activity)
     expect(screen.getByRole('status')).toHaveTextContent(/07 jul.*8 clics/i)
     fireEvent.keyDown(activity, { key: 'ArrowLeft' })
@@ -197,6 +236,32 @@ describe('public and shared UI', () => {
     rerender(<DailyActivityBarChart data={[]} />)
     expect(screen.getByText('Todavía no hay datos')).toBeInTheDocument()
     expect(screen.queryByRole('group')).not.toBeInTheDocument()
+  })
+
+  it('exposes reusable segmented controls and accessible information tooltips', async () => {
+    const onChange = vi.fn()
+    render(
+      <>
+        <SegmentedControl
+          ariaLabel="Vista de prueba"
+          onChange={onChange}
+          options={[
+            { value: 'first', label: 'Primero' },
+            { value: 'second', label: 'Segundo', tone: 'purple' },
+          ]}
+          value="first"
+        />
+        <InfoTooltip label="Información del gráfico">
+          Explicación del gráfico
+        </InfoTooltip>
+      </>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Segundo' }))
+    expect(onChange).toHaveBeenCalledWith('second')
+
+    fireEvent.focus(screen.getByRole('button', { name: 'Información del gráfico' }))
+    expect(await screen.findByText('Explicación del gráfico')).toBeInTheDocument()
   })
 
   it('preserves native button semantics and deterministic avatar identity', () => {
@@ -305,6 +370,21 @@ describe('dashboard pages', () => {
           Response.json({
             totals: { totalClicks: 12, clicks7d: 5, clicks30d: 10, activeLinks: 1 },
             series: [{ metric_date: '2026-07-07', clicks: 12 }],
+            breakdowns: {
+              status: 'ready',
+              source: 'demo',
+              scope: 'human',
+              totalClicks: 10,
+              coverage: {
+                from: '2026-07-01',
+                to: '2026-07-07',
+                truncated: false,
+                retention: 'local_demo',
+              },
+              referrers: [{ value: 'google.com', clicks: 4, percentage: 40 }],
+              countries: [{ value: 'PE', clicks: 5, percentage: 50 }],
+              devices: [{ value: 'Mobile', clicks: 6, percentage: 60 }],
+            },
           }),
         )
         .mockResolvedValueOnce(Response.json({ links: [link] })),
@@ -319,6 +399,10 @@ describe('dashboard pages', () => {
     expect(await screen.findByText('Clics totales')).toBeInTheDocument()
     expect(await screen.findByText('/railway')).toBeInTheDocument()
     expect(screen.getAllByText('12').length).toBeGreaterThan(0)
+    expect(screen.getByText('Desglose global del tráfico')).toBeInTheDocument()
+    expect(screen.getByText('google.com')).toBeInTheDocument()
+    expect(screen.getByText('Perú')).toBeInTheDocument()
+    expect(screen.getByText('Móvil')).toBeInTheDocument()
   })
 
   it('renders links table and action buttons', async () => {
@@ -479,10 +563,33 @@ describe('dashboard pages', () => {
       vi
         .fn()
         .mockResolvedValueOnce(Response.json({ link }))
-        .mockResolvedValueOnce(Response.json({ series: [{ clicks: 12 }] })),
+        .mockResolvedValueOnce(
+          Response.json({
+            series: [{ metric_date: '2026-07-07', clicks: 12 }],
+            breakdowns: {
+              status: 'ready',
+              source: 'demo',
+              scope: 'human',
+              totalClicks: 10,
+              coverage: {
+                from: '2026-07-01',
+                to: '2026-07-07',
+                truncated: false,
+                retention: 'local_demo',
+              },
+              referrers: [{ value: 'google.com', clicks: 4, percentage: 40 }],
+              countries: [{ value: 'PE', clicks: 5, percentage: 50 }],
+              devices: [{ value: 'Mobile', clicks: 6, percentage: 60 }],
+            },
+          }),
+        ),
     )
     render(<LinkDetailPage id="lnk_test" />)
     expect(await screen.findByText('https://links.davosdo.dev/railway')).toBeInTheDocument()
+    expect(await screen.findByText('Datos demo')).toBeInTheDocument()
+    expect(screen.getByText('google.com')).toBeInTheDocument()
+    expect(screen.getByText('Perú')).toBeInTheDocument()
+    expect(screen.getByText('Móvil')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Copiar' }))
     expect(navigator.clipboard.writeText).toHaveBeenCalled()
 

@@ -55,7 +55,7 @@ export function Sparkline({
       hovered={hovered}
       bloom={bloom}
       bloomOnHover={bloomOnHover}
-      sparkles={false}
+      sparkles="off"
       margins={{ top: 0, right: 0, bottom: 0, left: 0 }}
       className={className}
     >

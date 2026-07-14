@@ -29,6 +29,19 @@
   /* Official Dither Kit fill seeds from the pinned upstream snapshot. */
   --blue: #358ff3;
   --purple: #966eff;
+  /* Product purple scale. Keep the vivid Dither seed at 500 while darker
+     shades carry text and navigation contrast on light surfaces. */
+  --purple-50: #f8f6ff;
+  --purple-100: #eee9ff;
+  --purple-200: #ded5ff;
+  --purple-300: #c8b9ff;
+  --purple-400: #ad94ff;
+  --purple-500: #966eff;
+  --purple-600: #7852e6;
+  --purple-700: #613bc9;
+  --purple-800: #4f2bbd;
+  --purple-900: #3a208b;
+  --purple-950: #24144f;
   --pink: #f05abe;
   --green: #28d26e;
   --orange: #ff9632;
@@ -70,6 +83,17 @@
   --color-info-foreground: var(--info-foreground);
   --color-blue: var(--blue);
   --color-purple: var(--purple);
+  --color-purple-50: var(--purple-50);
+  --color-purple-100: var(--purple-100);
+  --color-purple-200: var(--purple-200);
+  --color-purple-300: var(--purple-300);
+  --color-purple-400: var(--purple-400);
+  --color-purple-500: var(--purple-500);
+  --color-purple-600: var(--purple-600);
+  --color-purple-700: var(--purple-700);
+  --color-purple-800: var(--purple-800);
+  --color-purple-900: var(--purple-900);
+  --color-purple-950: var(--purple-950);
   --color-pink: var(--pink);
   --color-green: var(--green);
   --color-orange: var(--orange);

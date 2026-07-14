@@ -8,7 +8,8 @@
     "enabled": true
   },
   "vars": {
-    "BETTER_AUTH_URL": "https://links.davosdo.dev"
+    "BETTER_AUTH_URL": "https://links.davosdo.dev",
+    "CLOUDFLARE_ACCOUNT_ID": ""
   },
   "d1_databases": [
     {

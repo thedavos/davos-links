@@ -1,4 +1,8 @@
 import { env } from 'cloudflare:workers'
+import {
+  getGlobalTrafficBreakdowns,
+  getTrafficBreakdowns,
+} from '#/lib/analytics/breakdowns'
 import { DEFAULT_WORKSPACE_ID } from '#/lib/constants'
 import type { CachedLink } from '#/lib/types'
 
@@ -46,6 +50,9 @@ export function parseReferrer(request: Request) {
 
 export function parseUserAgent(userAgent: string) {
   const lower = userAgent.toLowerCase()
+  const isIpad =
+    lower.includes('ipad') ||
+    (lower.includes('macintosh') && lower.includes('mobile'))
   const browser = lower.includes('firefox')
     ? 'Firefox'
     : lower.includes('edg/')
@@ -55,19 +62,22 @@ export function parseUserAgent(userAgent: string) {
         : lower.includes('safari')
           ? 'Safari'
           : 'Other'
-  const os = lower.includes('mac os')
-    ? 'macOS'
-    : lower.includes('windows')
+  const os = lower.includes('iphone') || isIpad
+    ? 'iOS'
+    : lower.includes('mac os') || lower.includes('macintosh')
+      ? 'macOS'
+      : lower.includes('windows')
       ? 'Windows'
       : lower.includes('android')
         ? 'Android'
-        : lower.includes('iphone') || lower.includes('ipad')
-          ? 'iOS'
-          : 'Other'
-  const device =
-    lower.includes('mobile') || lower.includes('iphone') || lower.includes('android')
-      ? 'Mobile'
-      : 'Desktop'
+        : 'Other'
+  const device = !userAgent.trim()
+    ? 'Unknown'
+    : isIpad || lower.includes('tablet') || (lower.includes('android') && !lower.includes('mobile'))
+      ? 'Tablet'
+      : lower.includes('mobile') || lower.includes('iphone')
+        ? 'Mobile'
+        : 'Desktop'
 
   return { browser, os, device }
 }
@@ -177,6 +187,7 @@ export async function getAnalyticsOverviewForRange(range: DateRange) {
 
   const series = normalizeSeries(results, range)
   const previousSeries = normalizeSeries(previousResults, previousRange)
+  const breakdowns = await getGlobalTrafficBreakdowns(range)
 
   return {
     totals: {
@@ -189,6 +200,7 @@ export async function getAnalyticsOverviewForRange(range: DateRange) {
     previousSeries,
     comparison: compareSeries(series, previousSeries),
     heatmap: series,
+    breakdowns,
     range,
     previousRange,
   }
@@ -222,11 +234,13 @@ export async function getLinkAnalytics(linkId: string, range = defaultRange()) {
 
   const series = normalizeSeries(results, range)
   const previousSeries = normalizeSeries(previousResults, previousRange)
+  const breakdowns = await getTrafficBreakdowns(linkId, range)
 
   return {
     series,
     previousSeries,
     comparison: compareSeries(series, previousSeries),
+    breakdowns,
     range,
     previousRange,
   }

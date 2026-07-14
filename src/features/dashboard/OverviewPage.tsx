@@ -11,12 +11,14 @@ import type { DitherColor } from '#/components/dither-kit'
 import { PageHeader } from '#/components/DashboardShell'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
+import { InfoTooltip } from '#/components/ui/info-tooltip'
 import {
   DateRangePicker,
   defaultDateRange,
   type DateRange,
 } from '#/components/ui/date-range'
-import type { LinkRow } from '#/lib/types'
+import type { AnalyticsBreakdowns, LinkRow } from '#/lib/types'
+import { TrafficBreakdowns } from './TrafficBreakdowns'
 
 type Overview = {
   totals: {
@@ -29,6 +31,7 @@ type Overview = {
   previousSeries: ChartPoint[]
   comparison: AnalyticsComparison
   heatmap: ChartPoint[]
+  breakdowns: AnalyticsBreakdowns | null
 }
 
 type AnalyticsComparison = {
@@ -54,11 +57,13 @@ export function OverviewPage() {
     previousSeries: [],
     comparison: emptyComparison,
     heatmap: [],
+    breakdowns: null,
   })
   const [links, setLinks] = useState<LinkRow[]>([])
   const [range, setRange] = useState<DateRange>(() => defaultDateRange(30))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retryNonce, setRetryNonce] = useState(0)
 
   useEffect(() => {
     setLoading(true)
@@ -84,12 +89,13 @@ export function OverviewPage() {
           previousSeries: typedOverviewData.previousSeries ?? [],
           comparison: typedOverviewData.comparison ?? emptyComparison,
           heatmap: typedOverviewData.heatmap ?? typedOverviewData.series ?? [],
+          breakdowns: typedOverviewData.breakdowns ?? null,
         })
         setLinks(typedLinksData.links ?? [])
       })
       .catch(() => setError('No se pudieron cargar las métricas.'))
       .finally(() => setLoading(false))
-  }, [range])
+  }, [range, retryNonce])
 
   const topLinks = links.slice(0, 5)
 
@@ -154,7 +160,13 @@ export function OverviewPage() {
       </div>
       <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div>
-          <h2 className="mb-3 text-sm font-medium">Clics en el tiempo</h2>
+          <div className="mb-3 flex min-h-5 items-center gap-1">
+            <h2 className="text-sm font-medium leading-5">Clics en el tiempo</h2>
+            <InfoTooltip label="Información sobre Clics en el tiempo">
+              Muestra los clics diarios del rango seleccionado. “Comparar” superpone el
+              periodo inmediatamente anterior con la misma duración.
+            </InfoTooltip>
+          </div>
           <ComparisonTrendChart
             current={overview.series}
             previous={overview.previousSeries}
@@ -185,6 +197,13 @@ export function OverviewPage() {
           </Card>
         </div>
       </section>
+      <TrafficBreakdowns
+        breakdowns={overview.breakdowns}
+        detail="Todos los enlaces · solo clics humanos · datos detallados de los últimos 3 meses"
+        loading={loading}
+        onRetry={() => setRetryNonce((value) => value + 1)}
+        title="Desglose global del tráfico"
+      />
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-medium">Actividad diaria</h2>
         <DailyActivityBarChart data={overview.series} />

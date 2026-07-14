@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ActiveDot,
   Area,
@@ -7,13 +7,16 @@ import {
   BarChart,
   Grid,
   Legend,
-  Line,
   Sparkline,
   Tooltip,
   XAxis,
   YAxis,
   type DitherColor,
 } from '#/components/dither-kit'
+import {
+  SegmentedControl,
+  type SegmentedControlOption,
+} from '#/components/ui/segmented-control'
 import { cn } from '#/lib/utils'
 
 export type ChartPoint = {
@@ -32,6 +35,39 @@ const comparisonConfig = {
   current: { label: 'Actual', color: 'blue' },
   previous: { label: 'Periodo anterior', color: 'purple' },
 } as const
+
+const currentConfig = {
+  current: comparisonConfig.current,
+} as const
+
+type ChartView = 'current' | 'comparison'
+
+const chartViewOptions: readonly SegmentedControlOption<ChartView>[] = [
+  {
+    value: 'current',
+    label: 'Actual',
+    ariaLabel: 'Mostrar solo el periodo actual',
+    tone: 'blue',
+    visual: (
+      <span aria-hidden="true" className="relative h-3 w-4 shrink-0">
+        <span className="absolute inset-x-0 top-[5px] h-px bg-blue-500" />
+        <span className="absolute right-0 top-[3px] size-1.5 rounded-full border border-white bg-blue-600 shadow-[0_0_0_1px_#358ff3]" />
+      </span>
+    ),
+  },
+  {
+    value: 'comparison',
+    label: 'Comparar',
+    ariaLabel: 'Comparar con el periodo anterior',
+    tone: 'purple',
+    visual: (
+      <span aria-hidden="true" className="relative h-3 w-4 shrink-0">
+        <span className="absolute inset-x-0 top-[2px] h-px bg-blue-500" />
+        <span className="absolute inset-x-0 top-[6px] h-1.5 bg-purple-500/55" />
+      </span>
+    ),
+  },
+]
 
 const activityConfig = {
   clicks: { label: 'Clics', color: 'green' },
@@ -59,7 +95,7 @@ export function MetricSparkline({
   return (
     <div aria-hidden="true" className="h-12 w-full" data-chart-label={label}>
       <Sparkline
-        animate
+        animate={false}
         bloom="low"
         bloomOnHover
         className="overflow-hidden rounded-sm"
@@ -78,6 +114,8 @@ export function ComparisonTrendChart({
   current: ChartPoint[]
   previous?: ChartPoint[]
 }) {
+  const [view, setView] = useState<ChartView>('current')
+  const isComparing = view === 'comparison'
   const rows = useMemo<ComparisonRow[]>(
     () =>
       current.map((point, index) => ({
@@ -87,36 +125,55 @@ export function ComparisonTrendChart({
       })),
     [current, previous],
   )
-  const max = Math.max(2, ...rows.flatMap((row) => [row.current, row.previous]))
+  const max = Math.max(
+    2,
+    ...rows.flatMap((row) =>
+      isComparing ? [row.current, row.previous] : [row.current],
+    ),
+  )
 
   if (!rows.length) return <EmptyChart className="h-64" />
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-blue-200/80 bg-card p-3 shadow-[0_18px_50px_-42px_rgba(53,143,243,0.9)]">
-      <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span>Comparación por día</span>
-        <span className="mono text-blue-700">max {formatNumber(max)}</span>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <SegmentedControl
+          ariaLabel="Vista del gráfico"
+          onChange={setView}
+          options={chartViewOptions}
+          value={view}
+        />
+        <div className="flex items-center gap-3">
+          <span>{isComparing ? 'Comparación por día' : 'Periodo actual'}</span>
+          <span className="mono text-blue-700">max {formatNumber(max)}</span>
+        </div>
       </div>
       <div className="h-64">
         <AreaChart
-          animate
-          animationDuration={600}
-          ariaLabel="Clics en el tiempo comparados con el periodo anterior"
+          animate={false}
+          ariaLabel={
+            isComparing
+              ? 'Clics en el tiempo comparados con el periodo anterior'
+              : 'Clics en el tiempo del periodo actual'
+          }
           bloom="low"
           bloomOnHover
           className="rounded-md bg-blue-50/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          config={comparisonConfig}
+          config={isComparing ? comparisonConfig : currentConfig}
           data={rows}
           getPointLabel={(row) =>
-            `${formatDate(row.date)}: ${formatNumber(row.current)} clics actuales y ${formatNumber(row.previous)} del periodo anterior`
+            isComparing
+              ? `${formatDate(row.date)}: ${formatNumber(row.current)} clics actuales y ${formatNumber(row.previous)} del periodo anterior`
+              : `${formatDate(row.date)}: ${formatNumber(row.current)} clics actuales`
           }
           margins={{ top: 36, right: 14, bottom: 30, left: 42 }}
-          sparkles={false}
+          sparkles="burst"
+          key={view}
         >
           <Grid horizontal vertical={false} />
           <XAxis dataKey="date" maxTicks={7} tickFormatter={(value) => formatDate(String(value))} />
           <YAxis tickFormatter={formatNumber} />
-          <Legend isClickable />
+          {isComparing ? <Legend isClickable /> : null}
           <Tooltip
             labelFormatter={formatDate}
             labelKey="date"
@@ -125,9 +182,11 @@ export function ComparisonTrendChart({
           <Area dataKey="current" variant="gradient">
             <ActiveDot variant="colored-border" />
           </Area>
-          <Line dataKey="previous" variant="dotted">
-            <ActiveDot variant="colored-border" />
-          </Line>
+          {isComparing ? (
+            <Area dataKey="previous" variant="gradient">
+              <ActiveDot variant="colored-border" />
+            </Area>
+          ) : null}
         </AreaChart>
       </div>
     </div>
@@ -151,8 +210,7 @@ export function DailyActivityBarChart({ data }: { data: ChartPoint[] }) {
       </div>
       <div className="h-64 min-w-0">
         <BarChart
-          animate
-          animationDuration={600}
+          animate={false}
           ariaLabel="Actividad diaria de clics"
           bloom="low"
           bloomOnHover
@@ -161,7 +219,7 @@ export function DailyActivityBarChart({ data }: { data: ChartPoint[] }) {
           data={rows}
           getPointLabel={(row) => `${formatDate(row.date)}: ${formatNumber(row.clicks)} clics`}
           margins={{ top: 16, right: 14, bottom: 30, left: 42 }}
-          sparkles={false}
+          sparkles="burst"
         >
           <Grid horizontal vertical={false} />
           <XAxis dataKey="date" maxTicks={8} tickFormatter={(value) => formatDate(String(value))} />

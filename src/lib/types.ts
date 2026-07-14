@@ -80,3 +80,26 @@ export type CachedLink = Pick<
 export type ApiResult<T> =
   | { ok: true; data: T; error?: never; field?: never }
   | { ok: false; error: string; field?: string; data?: never }
+
+export type AnalyticsBreakdownItem = {
+  value: string
+  clicks: number
+  percentage: number
+}
+
+export type AnalyticsBreakdowns = {
+  status: 'ready' | 'unavailable'
+  reason?: 'not_configured' | 'upstream_error'
+  source: 'analytics_engine' | 'demo'
+  scope: 'human'
+  totalClicks: number
+  coverage: {
+    from: string
+    to: string
+    truncated: boolean
+    retention: '3_months' | 'local_demo'
+  }
+  referrers: AnalyticsBreakdownItem[]
+  countries: AnalyticsBreakdownItem[]
+  devices: AnalyticsBreakdownItem[]
+}

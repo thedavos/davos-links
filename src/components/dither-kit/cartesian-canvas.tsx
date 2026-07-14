@@ -7,6 +7,7 @@ import {
   paintColumn,
   prefersReducedMotion,
   resample,
+  sparkleFrame,
 } from "./dither-paint"
 import { rgb } from "./palette"
 
@@ -21,6 +22,12 @@ type LoopArgs = {
   state: RefObject<ChartContextValue>
   targets: RefObject<Record<string, Surface>>
   stars: RefObject<Star[]>
+  burst: RefObject<{ revision: number; startedAt: number }>
+}
+
+type LoopController = {
+  wake: () => void
+  stop: () => void
 }
 
 /**
@@ -38,9 +45,11 @@ function startCartesianLoop({
   state,
   targets,
   stars,
-}: LoopArgs): (() => void) | undefined {
+  burst,
+}: LoopArgs): LoopController | undefined {
   const c = canvas.getContext("2d")
   if (!c || cols <= 0 || rows <= 0) return undefined
+  const canvasContext = c
   canvas.width = cols
   canvas.height = rows
 
@@ -96,6 +105,8 @@ function startCartesianLoop({
   }
 
   let raf = 0
+  let scheduled = false
+  let stopped = false
   let tick = 0
   let last = 0
   let animStart = 0
@@ -104,10 +115,18 @@ function startCartesianLoop({
   let entranceReported = !animate
   let intensity = 0
   let needsFill = true
+  let sparklesWereVisible = false
   let lastPaintSig = ""
   let lastSelected: string | null | undefined = Symbol() as never
 
-  const draw = (now: number) => {
+  const schedule = () => {
+    if (stopped || scheduled) return
+    scheduled = true
+    raf = requestAnimationFrame(draw)
+  }
+
+  function draw(now: number) {
+    scheduled = false
     const s = state.current
     if (!s.ready) return
     // Keep the bloom layer in sync with the crisp canvas while it's active.
@@ -182,7 +201,24 @@ function startCartesianLoop({
     // Live hover wins; the controlled markerIndex (e.g. a committed point)
     // is the fallback shown when nothing is hovered.
     const marker = s.hoverIndex != null ? s.hoverIndex : s.markerIndex
-    const winkDue = s.sparkles && !reduce && now - last >= 100
+    if (
+      s.sparkles === "burst" &&
+      s.sparkleRevision > burst.current.revision
+    ) {
+      burst.current = { revision: s.sparkleRevision, startedAt: now }
+    }
+    const sparkleElapsed = burst.current.startedAt
+      ? now - burst.current.startedAt
+      : 0
+    const sparkle = sparkleFrame(
+      s.sparkles,
+      s.sparkleRevision,
+      sparkleElapsed,
+      reduce
+    )
+    if (sparklesWereVisible && !sparkle.active) needsFill = true
+    sparklesWereVisible = sparkle.active
+    const winkDue = sparkle.active && now - last >= 100
     // Repaint when a tweak-driven paint input changes (variant, stacking) so
     // the panel updates the fill live — without resetting the entrance reveal.
     const paintSig = `${s.stackType}|${s.configKeys
@@ -197,7 +233,8 @@ function startCartesianLoop({
       !(
         moving ||
         settling ||
-        s.sparkles ||
+        sparkle.active ||
+        needsFill ||
         marker != null ||
         progChanged ||
         sigChanged
@@ -222,8 +259,8 @@ function startCartesianLoop({
       paintFill(intensity, reveal)
       needsFill = false
     }
-    c.clearRect(0, 0, cols, rows)
-    c.drawImage(off, 0, 0)
+    canvasContext.clearRect(0, 0, cols, rows)
+    canvasContext.drawImage(off, 0, 0)
 
     const mx =
       marker != null && s.dataLength > 1
@@ -237,14 +274,14 @@ function startCartesianLoop({
         const my = Math.round(cur.top[mx] ?? 0)
         // Full-height column + a chunky marker block at the point — the
         // series colour at higher opacity, so it reads on either theme.
-        c.fillStyle = rgb(seed.fill, 1, 0.55)
-        for (let y = my; y < rows; y++) c.fillRect(mx, y, 1, 1)
-        c.fillStyle = rgb(seed.fill)
-        c.fillRect(mx - 1, my - 1, 3, 3)
+        canvasContext.fillStyle = rgb(seed.fill, 1, 0.55)
+        for (let y = my; y < rows; y++) canvasContext.fillRect(mx, y, 1, 1)
+        canvasContext.fillStyle = rgb(seed.fill)
+        canvasContext.fillRect(mx - 1, my - 1, 3, 3)
       }
     }
 
-    for (const star of stars.current) {
+    for (const star of sparkle.active ? stars.current : []) {
       const cur = current[star.key]
       if (!cur) continue
       const sx = Math.round(
@@ -255,31 +292,38 @@ function startCartesianLoop({
       const floor = cur.floor[sx] ?? rows - 1
       const sy = Math.round(top + star.depth * (floor - top))
       const tw = reduce ? 0.85 : (Math.sin((tick + star.phase) * 0.35) + 1) / 2
-      const lift = tw * (0.7 + 0.3 * intensity)
+      const lift = tw * (0.7 + 0.3 * intensity) * sparkle.opacity
       if (lift < 0.55 || sy < 0 || sy >= rows) continue
       // Sparkles glint in the series colour via opacity (the `lift` wink)
       // rather than a lighter shade — so they never read as stray white
       // pixels on a light background.
       const starColor = s.seedOf(star.key).fill
-      c.fillStyle = rgb(starColor, 1, lift)
-      c.fillRect(sx, sy, 1, 1)
+      canvasContext.fillStyle = rgb(starColor, 1, lift)
+      canvasContext.fillRect(sx, sy, 1, 1)
       // At the peak of a wink the star flares into a 4-point glint.
       if (tw > 0.9) {
-        c.fillStyle = rgb(starColor, 1, lift * 0.6 * (tw - 0.9) * 10)
-        c.fillRect(sx - 1, sy, 1, 1)
-        c.fillRect(sx + 1, sy, 1, 1)
-        c.fillRect(sx, sy - 1, 1, 1)
-        c.fillRect(sx, sy + 1, 1, 1)
+        canvasContext.fillStyle = rgb(starColor, 1, lift * 0.6 * (tw - 0.9) * 10)
+        canvasContext.fillRect(sx - 1, sy, 1, 1)
+        canvasContext.fillRect(sx + 1, sy, 1, 1)
+        canvasContext.fillRect(sx, sy - 1, 1, 1)
+        canvasContext.fillRect(sx, sy + 1, 1, 1)
       }
     }
 
-    if (moving || settling || (animate && prog < 1) || s.sparkles) {
-      raf = requestAnimationFrame(draw)
+    if (moving || settling || (animate && prog < 1) || sparkle.active) {
+      schedule()
     }
   }
 
-  raf = requestAnimationFrame(draw)
-  return () => cancelAnimationFrame(raf)
+  schedule()
+  return {
+    wake: schedule,
+    stop: () => {
+      stopped = true
+      if (scheduled) cancelAnimationFrame(raf)
+      scheduled = false
+    },
+  }
 }
 
 /**
@@ -325,8 +369,11 @@ export function CartesianCanvas() {
   // column count) matters, so it need not be rebuilt on unrelated re-renders.
   const stars = useMemo(() => {
     const out: Star[] = []
-    if (!ctx.sparkles) return out
-    const per = Math.max(4, Math.round(cols / 14))
+    if (ctx.sparkles === "off") return out
+    const per =
+      ctx.sparkles === "burst"
+        ? Math.min(8, Math.max(3, Math.round(cols / 48)))
+        : Math.max(4, Math.round(cols / 14))
     configKeys.forEach((key, k) => {
       for (let i = 0; i < per; i++) {
         const seed = i * 67 + 13 + k * 131
@@ -348,6 +395,8 @@ export function CartesianCanvas() {
   const stateRef = useRef(ctx)
   const targetsRef = useRef(targets)
   const starsRef = useRef(stars)
+  const burstRef = useRef({ revision: 0, startedAt: 0 })
+  const loopRef = useRef<LoopController | null>(null)
   useEffect(() => {
     stateRef.current = ctx
     targetsRef.current = targets
@@ -357,7 +406,7 @@ export function CartesianCanvas() {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    return startCartesianLoop({
+    const loop = startCartesianLoop({
       canvas,
       bloomCanvas: bloomRef.current,
       cols,
@@ -365,20 +414,21 @@ export function CartesianCanvas() {
       state: stateRef,
       targets: targetsRef,
       stars: starsRef,
+      burst: burstRef,
     })
-  }, [
-    cols,
-    rows,
-    ctx.revision,
-    ctx.hoverIndex,
-    ctx.markerIndex,
-    ctx.isMouseInChart,
-    ctx.hovered,
-    ctx.selectedDataKey,
-    ctx.focusDataKey,
-    ctx.seriesSpecs,
-    ctx.sparkles,
-  ])
+    loopRef.current = loop ?? null
+    return () => {
+      loop?.stop()
+      if (loopRef.current === loop) loopRef.current = null
+    }
+  }, [cols, rows])
+
+  // Context changes (including pointer scrubbing) only wake the existing
+  // painter. Recreating it here would resize and clear both canvases for a
+  // frame every time the hovered index changes, producing a visible flicker.
+  useEffect(() => {
+    loopRef.current?.wake()
+  }, [ctx, targets, stars])
 
   const bloomActive = ctx.bloomOnHover
     ? ctx.isMouseInChart || ctx.hovered

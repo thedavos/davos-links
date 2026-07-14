@@ -6,60 +6,72 @@ import { PageHeader } from '#/components/DashboardShell'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
+import { InfoTooltip } from '#/components/ui/info-tooltip'
 import {
   DateRangePicker,
   defaultDateRange,
   type DateRange,
 } from '#/components/ui/date-range'
 import { PUBLIC_ORIGIN } from '#/lib/constants'
-import type { LinkRow } from '#/lib/types'
+import type { AnalyticsBreakdowns, LinkRow } from '#/lib/types'
+import { TrafficBreakdowns } from './TrafficBreakdowns'
 
 export function LinkDetailPage({ id }: { id: string }) {
   const [link, setLink] = useState<LinkRow | null | undefined>(undefined)
   const [series, setSeries] = useState<ChartPoint[]>([])
   const [previousSeries, setPreviousSeries] = useState<ChartPoint[]>([])
   const [comparison, setComparison] = useState<AnalyticsComparison | null>(null)
+  const [breakdowns, setBreakdowns] = useState<AnalyticsBreakdowns | null>(null)
   const [range, setRange] = useState<DateRange>(() => defaultDateRange(30))
   const [copied, setCopied] = useState(false)
-  const [error, setError] = useState('')
+  const [linkError, setLinkError] = useState('')
+  const [analyticsError, setAnalyticsError] = useState('')
+  const [analyticsLoading, setAnalyticsLoading] = useState(true)
+  const [retryNonce, setRetryNonce] = useState(0)
 
   useEffect(() => {
     setLink(undefined)
-    setError('')
+    setLinkError('')
+    void fetchJson<{ link?: LinkRow }>(`/api/links/${id}`)
+      .then((data) => setLink(data.link ?? null))
+      .catch(() => {
+        setLinkError('No se pudo cargar el enlace.')
+        setLink(null)
+      })
+  }, [id])
+
+  useEffect(() => {
+    setAnalyticsLoading(true)
+    setAnalyticsError('')
     setSeries([])
     setPreviousSeries([])
     setComparison(null)
+    setBreakdowns(null)
     const params = new URLSearchParams(range)
-    void Promise.all([
-      fetch(`/api/links/${id}`).then((response) => response.json()),
-      fetch(`/api/links/${id}/analytics?${params.toString()}`).then((response) =>
-        response.json(),
-      ),
-    ])
-      .then(([linkData, analyticsData]) => {
-        const typedLinkData = linkData as { link?: LinkRow }
-        const typedAnalyticsData = analyticsData as {
-          series?: ChartPoint[]
-          previousSeries?: ChartPoint[]
-          comparison?: AnalyticsComparison
-        }
-        setLink(typedLinkData.link ?? null)
-        setSeries(typedAnalyticsData.series ?? [])
-        setPreviousSeries(typedAnalyticsData.previousSeries ?? [])
-        setComparison(typedAnalyticsData.comparison ?? null)
+    void fetchJson<{
+      series?: ChartPoint[]
+      previousSeries?: ChartPoint[]
+      comparison?: AnalyticsComparison
+      breakdowns?: AnalyticsBreakdowns
+    }>(`/api/links/${id}/analytics?${params.toString()}`)
+      .then((analyticsData) => {
+        setSeries(analyticsData.series ?? [])
+        setPreviousSeries(analyticsData.previousSeries ?? [])
+        setComparison(analyticsData.comparison ?? null)
+        setBreakdowns(analyticsData.breakdowns ?? null)
       })
       .catch(() => {
-        setError('No se pudo cargar el enlace.')
-        setLink(null)
+        setAnalyticsError('No se pudieron cargar las métricas del enlace.')
       })
-  }, [id, range])
+      .finally(() => setAnalyticsLoading(false))
+  }, [id, range, retryNonce])
 
   if (link === undefined) {
     return <PageHeader title="Cargando enlace" />
   }
 
   if (link === null) {
-    return <PageHeader detail={error || undefined} title="No encontramos este enlace" />
+    return <PageHeader detail={linkError || undefined} title="No encontramos este enlace" />
   }
 
   const shortUrl = `${PUBLIC_ORIGIN}/${link.short_path}`
@@ -117,25 +129,60 @@ export function LinkDetailPage({ id }: { id: string }) {
       <section className="mt-8">
         <div className="mb-3 flex flex-col justify-between gap-3 md:flex-row md:items-center">
           <div>
-            <h2 className="text-sm font-medium">Clics en el tiempo</h2>
+            <div className="flex min-h-5 items-center gap-1">
+              <h2 className="text-sm font-medium leading-5">Clics en el tiempo</h2>
+              <InfoTooltip label="Información sobre Clics en el tiempo">
+                Muestra los clics diarios del rango seleccionado. “Comparar” superpone
+                el periodo inmediatamente anterior con la misma duración.
+              </InfoTooltip>
+            </div>
             {comparison ? <ComparisonSummary comparison={comparison} /> : null}
           </div>
           <DateRangePicker onChange={setRange} value={range} />
         </div>
-        <ComparisonTrendChart current={series} previous={previousSeries} />
+        {analyticsError ? (
+          <div
+            className="mb-3 flex flex-col justify-between gap-3 border border-destructive/35 bg-destructive/5 px-3 py-2 text-sm text-destructive sm:flex-row sm:items-center"
+            role="alert"
+          >
+            <span>{analyticsError}</span>
+            <Button
+              onClick={() => setRetryNonce((value) => value + 1)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Reintentar
+            </Button>
+          </div>
+        ) : null}
+        {analyticsLoading ? <AnalyticsChartSkeleton /> : <ComparisonTrendChart current={series} previous={previousSeries} />}
       </section>
-      <section className="mt-8 grid gap-4 md:grid-cols-3">
-        {['Principales orígenes', 'Países destacados', 'Dispositivos'].map((title) => (
-          <Card className="p-4" key={title}>
-            <h2 className="text-sm font-medium">{title}</h2>
-            <p className="mt-6 text-sm text-muted-foreground">
-              Todavía no hay datos suficientes.
-            </p>
-          </Card>
-        ))}
-      </section>
+      <TrafficBreakdowns
+        breakdowns={breakdowns}
+        loading={analyticsLoading}
+        onRetry={() => setRetryNonce((value) => value + 1)}
+      />
     </>
   )
+}
+
+function AnalyticsChartSkeleton() {
+  return (
+    <div
+      aria-label="Cargando métricas"
+      className="grid h-72 place-items-center rounded-lg border border-dashed border-blue-200 bg-blue-50/35 text-sm text-muted-foreground"
+      role="status"
+    >
+      Cargando métricas...
+    </div>
+  )
+}
+
+async function fetchJson<T>(input: RequestInfo | URL): Promise<T> {
+  const response = await fetch(input)
+  if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
+  return response.json() as Promise<T>
 }
 
 type AnalyticsComparison = {

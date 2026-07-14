@@ -14,7 +14,7 @@ import {
   useChartController,
 } from "./chart-context"
 import { CommonChartContext } from "./common-context"
-import type { BloomInput } from "./dither-paint"
+import type { BloomInput, SparkleMode } from "./dither-paint"
 import { cn } from "./lib"
 import type { StackType } from "./scales"
 import { useChartDimensions } from "./use-chart-dimensions"
@@ -61,8 +61,8 @@ export type CartesianChartProps<TData extends Row> = {
   ariaLabel?: string
   /** Announces the active point while the chart is navigated with the keyboard. */
   getPointLabel?: (row: TData, index: number) => string
-  /** Decorative winking pixels. Disable for dense analytical dashboards. */
-  sparkles?: boolean
+  /** Decorative winking pixels. Bursts run once per pointer entry or root focus. */
+  sparkles?: SparkleMode
 }
 
 /** Which render layer a composed part targets — defaults to the front SVG. */
@@ -102,7 +102,7 @@ export function CartesianRoot<TData extends Row>({
   onSelectionChange,
   ariaLabel = "Gráfica",
   getPointLabel,
-  sparkles = true,
+  sparkles = "off",
 }: CartesianChartProps<TData> & {
   chartType: ChartType
   Canvas: ComponentType
@@ -182,11 +182,14 @@ export function CartesianRoot<TData extends Row>({
           className={cn("relative h-full w-full", className)}
           role={interactive ? "group" : undefined}
           aria-label={interactive ? ariaLabel : undefined}
+          data-chart-animation={animate ? "entrance" : "off"}
+          data-chart-sparkles={sparkles}
           tabIndex={interactive && data.length ? 0 : undefined}
           onKeyDown={onKeyDown}
           onFocus={(event) => {
             if (!interactive || event.currentTarget !== event.target) return
             setKeyboardActive(true)
+            ctx.triggerSparkles()
             activateIndex(data.length ? data.length - 1 : null)
           }}
           onBlur={(event) => {
@@ -194,7 +197,10 @@ export function CartesianRoot<TData extends Row>({
             setKeyboardActive(false)
             activateIndex(null)
           }}
-          onPointerEnter={() => ctx.setMouseInChart(true)}
+          onPointerEnter={() => {
+            ctx.setMouseInChart(true)
+            ctx.triggerSparkles()
+          }}
           onPointerMove={interactive ? (e) => onMove(e.clientX) : undefined}
           onPointerLeave={() => {
             ctx.setMouseInChart(false)

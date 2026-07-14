@@ -135,6 +135,25 @@ export type BloomConfig = {
 /** A preset name, a full config, or "off". */
 export type BloomInput = BloomLevel | BloomConfig
 
+export type SparkleMode = "off" | "burst" | "continuous"
+export const SPARKLE_BURST_DURATION = 500
+
+/** Resolve whether a sparkle frame should paint and its burst fade envelope. */
+export function sparkleFrame(
+  mode: SparkleMode,
+  revision: number,
+  elapsed: number,
+  reducedMotion: boolean
+) {
+  if (reducedMotion || mode === "off") return { active: false, opacity: 0 }
+  if (mode === "continuous") return { active: true, opacity: 1 }
+  if (revision <= 0 || elapsed >= SPARKLE_BURST_DURATION) {
+    return { active: false, opacity: 0 }
+  }
+  const progress = clamp01(elapsed / SPARKLE_BURST_DURATION)
+  return { active: true, opacity: Math.sin(Math.PI * progress) }
+}
+
 const PRESET: Record<Exclude<BloomLevel, "off">, BloomConfig> = {
   low: { blur: 3, brightness: 1.35, opacity: 0.7, saturate: 1.4 },
   high: { blur: 5, brightness: 1.5, opacity: 0.78, saturate: 1.5 },

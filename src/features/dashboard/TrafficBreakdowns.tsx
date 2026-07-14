@@ -1,0 +1,214 @@
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import { Card } from '#/components/ui/card'
+import type { AnalyticsBreakdownItem, AnalyticsBreakdowns } from '#/lib/types'
+import { cn } from '#/lib/utils'
+
+const CARD_CONFIG = {
+  referrers: {
+    title: 'Principales orígenes',
+    eyebrow: 'ORIGEN',
+    border: 'border-purple-200',
+    text: 'text-purple-800',
+    fill: 'bg-purple-500 text-purple-950',
+  },
+  countries: {
+    title: 'Países destacados',
+    eyebrow: 'PAÍS',
+    border: 'border-blue-200',
+    text: 'text-blue-800',
+    fill: 'bg-blue-500 text-blue-950',
+  },
+  devices: {
+    title: 'Dispositivos',
+    eyebrow: 'DISPOSITIVO',
+    border: 'border-green-200',
+    text: 'text-success',
+    fill: 'bg-green-500 text-green-950',
+  },
+} as const
+
+type BreakdownKind = keyof typeof CARD_CONFIG
+
+export function TrafficBreakdowns({
+  breakdowns,
+  detail = 'Solo clics humanos · datos detallados de los últimos 3 meses',
+  loading,
+  onRetry,
+  title = 'Desglose del tráfico',
+}: {
+  breakdowns: AnalyticsBreakdowns | null
+  detail?: string
+  loading: boolean
+  onRetry: () => void
+  title?: string
+}) {
+  const unavailable = breakdowns?.status === 'unavailable'
+
+  return (
+    <section aria-busy={loading} aria-labelledby="traffic-breakdown-title" className="mt-8">
+      <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-medium" id="traffic-breakdown-title">
+              {title}
+            </h2>
+            {breakdowns?.source === 'demo' ? (
+              <Badge variant="accent">Datos demo</Badge>
+            ) : null}
+            {breakdowns?.coverage.truncated ? (
+              <Badge variant="warning">Rango limitado</Badge>
+            ) : null}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {detail}
+          </p>
+        </div>
+        {breakdowns?.status === 'ready' ? (
+          <p className="mono text-xs text-muted-foreground">
+            {formatNumber(breakdowns.totalClicks)} clics analizados
+          </p>
+        ) : null}
+      </div>
+
+      {unavailable ? (
+        <div
+          className="mb-3 flex flex-col justify-between gap-3 border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning sm:flex-row sm:items-center"
+          role="alert"
+        >
+          <span>
+            {breakdowns.reason === 'not_configured'
+              ? 'Los desgloses todavía no están configurados en este entorno.'
+              : 'Los desgloses no están disponibles temporalmente.'}
+          </span>
+          <Button onClick={onRetry} size="sm" type="button" variant="outline">
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
+
+      {breakdowns?.coverage.truncated ? (
+        <p className="mb-3 text-xs text-muted-foreground">
+          La vista detallada comienza el {formatCoverageDate(breakdowns.coverage.from)} por
+          la retención de Analytics Engine.
+        </p>
+      ) : null}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {(['referrers', 'countries', 'devices'] as const).map((kind) => (
+          <BreakdownCard
+            items={breakdowns?.status === 'ready' ? breakdowns[kind] : []}
+            key={kind}
+            kind={kind}
+            loading={loading}
+            unavailable={unavailable}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function BreakdownCard({
+  items,
+  kind,
+  loading,
+  unavailable,
+}: {
+  items: AnalyticsBreakdownItem[]
+  kind: BreakdownKind
+  loading: boolean
+  unavailable: boolean
+}) {
+  const config = CARD_CONFIG[kind]
+
+  return (
+    <Card className={cn('overflow-hidden border-t-2 p-4', config.border)}>
+      <p className={cn('mono text-[10px] font-semibold tracking-[0.12em]', config.text)}>
+        {config.eyebrow}
+      </p>
+      <h3 className="mt-1 text-sm font-medium">{config.title}</h3>
+
+      {loading ? (
+        <div aria-label={`Cargando ${config.title.toLowerCase()}`} className="mt-5 grid gap-4">
+          {[72, 54, 38].map((width) => (
+            <div className="grid gap-2" key={width}>
+              <div className="h-3 rounded-sm bg-muted" style={{ width: `${width}%` }} />
+              <div className="h-1.5 rounded-full bg-muted" />
+            </div>
+          ))}
+        </div>
+      ) : items.length ? (
+        <ol className="mt-4 grid gap-3">
+          {items.map((item) => {
+            const label = formatBreakdownValue(kind, item.value)
+            return (
+              <li
+                aria-label={`${label}: ${formatNumber(item.clicks)} clics, ${formatPercentage(item.percentage)}`}
+                key={item.value || '__empty'}
+              >
+                <div className="flex items-baseline justify-between gap-3 text-xs">
+                  <span className="min-w-0 truncate font-medium" title={label}>
+                    {label}
+                  </span>
+                  <span className="mono shrink-0 text-muted-foreground">
+                    {formatNumber(item.clicks)} · {formatPercentage(item.percentage)}
+                  </span>
+                </div>
+                <div aria-hidden="true" className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={cn('dither-static h-full rounded-full', config.fill)}
+                    style={{ width: `${Math.max(1, Math.min(100, item.percentage))}%` }}
+                  />
+                </div>
+              </li>
+            )
+          })}
+        </ol>
+      ) : (
+        <p className="mt-6 text-sm text-muted-foreground">
+          {unavailable ? 'Datos no disponibles.' : 'Sin clics humanos en este periodo.'}
+        </p>
+      )}
+    </Card>
+  )
+}
+
+function formatBreakdownValue(kind: BreakdownKind, value: string) {
+  if (kind === 'referrers') return value || 'Directo / sin referencia'
+  if (kind === 'devices') {
+    return (
+      {
+        Mobile: 'Móvil',
+        Tablet: 'Tablet',
+        Desktop: 'Escritorio',
+        Unknown: 'Desconocido',
+      }[value] ?? (value || 'Desconocido')
+    )
+  }
+  if (!value) return 'Desconocido'
+  if (value === 'T1') return 'Red Tor'
+  try {
+    return new Intl.DisplayNames(['es'], { type: 'region' }).of(value) ?? value
+  } catch {
+    return value
+  }
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('es').format(value)
+}
+
+function formatPercentage(value: number) {
+  return `${new Intl.NumberFormat('es', { maximumFractionDigits: 1 }).format(value)}%`
+}
+
+function formatCoverageDate(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`)
+  return new Intl.DateTimeFormat('es', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date)
+}

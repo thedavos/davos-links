@@ -37,6 +37,18 @@ Set local auth values in `.dev.vars`:
 ```bash
 BETTER_AUTH_SECRET="replace-with-a-random-secret"
 BETTER_AUTH_URL="http://localhost:3000"
+ANALYTICS_DATA_SOURCE="demo"
+```
+
+Copy `.dev.vars.example` as a starting point. With `ANALYTICS_DATA_SOURCE=demo`,
+the detail view reads deterministic country, referrer, and device aggregates from
+the local D1 database; it never calls the production Analytics Engine API.
+
+Prepare the local database and demo account with:
+
+```bash
+pnpm db:migrate:local
+pnpm db:seed-demo:local
 ```
 
 Local demo credentials after seeding:
@@ -50,9 +62,15 @@ For production, replace the placeholder Cloudflare resource IDs in `wrangler.jso
 
 ```bash
 wrangler secret put BETTER_AUTH_SECRET
+wrangler secret put ANALYTICS_ENGINE_API_TOKEN
 ```
 
-`BETTER_AUTH_URL` is configured as `https://links.davosdo.dev` in `wrangler.jsonc`.
+Create `ANALYTICS_ENGINE_API_TOKEN` as a custom Cloudflare token restricted to
+the Davos Links account with `Account > Account Analytics > Read`. Set the
+non-secret `CLOUDFLARE_ACCOUNT_ID` value in `wrangler.jsonc`. `BETTER_AUTH_URL`
+is configured as `https://links.davosdo.dev` there as well. If Wrangler reports
+an expired session, run `pnpm exec wrangler login` before setting secrets or
+deploying.
 
 ## Scripts
 
@@ -64,6 +82,7 @@ pnpm preview          # Preview build
 pnpm deploy           # Build and deploy with Wrangler
 pnpm cf-typegen       # Generate Cloudflare binding types
 pnpm db:migrate:local # Apply D1 migrations locally
+pnpm db:seed-demo:local # Add the demo login, links, and 60 days of analytics
 pnpm db:migrate       # Apply D1 migrations remotely
 pnpm ui:detect        # Run Impeccable detector
 ```
@@ -118,7 +137,9 @@ npx skills add Leonxlnx/taste-skill
 
 ## Known Limitations
 
-- Analytics dashboards read D1 daily aggregates; raw Analytics Engine SQL querying is prepared conceptually but not exposed in the UI yet.
+- Per-link country, referrer, and device breakdowns query Analytics Engine for
+  human clicks and are limited to its three-month retention window. Local demo
+  mode reads equivalent seeded aggregates from D1.
 - Tags and campaigns have schema and placeholder pages; full CRUD is future work.
 - Link detail has inspect/copy/open actions; full edit form is future work.
 - Registration is intentionally hidden from the UI because this is a private single-operator app.

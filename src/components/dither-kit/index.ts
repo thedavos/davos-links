@@ -33,6 +33,6 @@ export type {
   Margins,
   StrokeVariant,
 } from './chart-context'
-export type { BloomInput } from './dither-paint'
+export type { BloomInput, SparkleMode } from './dither-paint'
 export type { DitherColor } from './palette'
 export type { PixelBloom, PixelColor } from './pixel'
