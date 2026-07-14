@@ -357,8 +357,8 @@ export async function getLinkAnalytics(linkId: string, range = defaultRange()) {
     .bind(DEFAULT_WORKSPACE_ID, linkId, previousRange.from, previousRange.to)
     .all<AnalyticsPoint>()
 
-  const series = normalizeSeries(results, range)
-  const previousSeries = normalizeSeries(previousResults, previousRange)
+  const series = normalizeLinkSeries(results, range)
+  const previousSeries = normalizeLinkSeries(previousResults, previousRange)
   const breakdowns = await getTrafficBreakdowns(linkId, range)
 
   return {
@@ -368,6 +368,8 @@ export async function getLinkAnalytics(linkId: string, range = defaultRange()) {
     breakdowns,
     range,
     previousRange,
+    scope: 'human' as const,
+    timezone: ANALYTICS_TIMEZONE,
   }
 }
 
@@ -450,7 +452,7 @@ export type AnalyticsComparison = {
   currentClicks: number
   previousClicks: number
   delta: number
-  deltaPercent: number
+  deltaPercent: number | null
   trend: 'up' | 'down' | 'flat'
 }
 
@@ -611,34 +613,41 @@ export function compareMetric(current: number, previous: number): AnalyticsDelta
   }
 }
 
-function normalizeSeries(points: AnalyticsPoint[], range: DateRange) {
-  const byDate = new Map(points.map((point) => [point.metric_date, point]))
-  return eachDate(range).map((metric_date) => {
-    const point = byDate.get(metric_date)
-    return {
-      metric_date,
-      clicks: Number(point?.clicks ?? 0),
-      bot_clicks: Number(point?.bot_clicks ?? 0),
-    }
-  })
-}
-
 function compareSeries(
   series: AnalyticsPoint[],
   previousSeries: AnalyticsPoint[],
 ): AnalyticsComparison {
-  const currentClicks = sumClicks(series)
-  const previousClicks = sumClicks(previousSeries)
+  const currentClicks = sumHumanClicks(series)
+  const previousClicks = sumHumanClicks(previousSeries)
   const delta = currentClicks - previousClicks
-  const deltaPercent =
-    previousClicks === 0 ? (currentClicks > 0 ? 100 : 0) : (delta / previousClicks) * 100
+  const deltaPercent = previousClicks === 0 ? null : (delta / previousClicks) * 100
   const trend = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
 
   return { currentClicks, previousClicks, delta, deltaPercent, trend }
 }
 
-function sumClicks(points: AnalyticsPoint[]) {
-  return points.reduce((total, point) => total + Number(point.clicks ?? 0), 0)
+function normalizeLinkSeries(points: AnalyticsPoint[], range: DateRange) {
+  const byDate = new Map(points.map((point) => [point.metric_date, point]))
+  return eachDate(range).map((metric_date) => {
+    const point = byDate.get(metric_date)
+    const recordedClicks = toNonNegativeCount(point?.clicks)
+    const botClicks = toNonNegativeCount(point?.bot_clicks)
+    const humanClicks = Math.max(recordedClicks - botClicks, 0)
+    return {
+      metric_date,
+      clicks: humanClicks,
+      human_clicks: humanClicks,
+      bot_clicks: botClicks,
+      recorded_clicks: recordedClicks,
+    }
+  })
+}
+
+function sumHumanClicks(points: Array<AnalyticsPoint & { human_clicks?: number }>) {
+  return points.reduce(
+    (total, point) => total + toNonNegativeCount(point.human_clicks ?? point.clicks),
+    0,
+  )
 }
 
 function eachDate(range: DateRange) {

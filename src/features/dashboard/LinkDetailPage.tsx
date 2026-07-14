@@ -28,19 +28,25 @@ export function LinkDetailPage({ id }: { id: string }) {
   const [analyticsError, setAnalyticsError] = useState('')
   const [analyticsLoading, setAnalyticsLoading] = useState(true)
   const [retryNonce, setRetryNonce] = useState(0)
+  const [effectiveRange, setEffectiveRange] = useState<DateRange | null>(null)
+  const [previousRange, setPreviousRange] = useState<DateRange | null>(null)
 
   useEffect(() => {
+    const controller = new AbortController()
     setLink(undefined)
     setLinkError('')
-    void fetchJson<{ link?: LinkRow }>(`/api/links/${id}`)
+    void fetchJson<{ link?: LinkRow }>(`/api/links/${id}`, controller.signal)
       .then((data) => setLink(data.link ?? null))
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return
         setLinkError('No se pudo cargar el enlace.')
         setLink(null)
       })
+    return () => controller.abort()
   }, [id])
 
   useEffect(() => {
+    const controller = new AbortController()
     setAnalyticsLoading(true)
     setAnalyticsError('')
     setSeries([])
@@ -53,17 +59,29 @@ export function LinkDetailPage({ id }: { id: string }) {
       previousSeries?: ChartPoint[]
       comparison?: AnalyticsComparison
       breakdowns?: AnalyticsBreakdowns
-    }>(`/api/links/${id}/analytics?${params.toString()}`)
+      range?: DateRange
+      previousRange?: DateRange
+      scope?: 'human'
+      timezone?: 'UTC'
+    }>(`/api/links/${id}/analytics?${params.toString()}`, controller.signal)
       .then((analyticsData) => {
         setSeries(analyticsData.series ?? [])
         setPreviousSeries(analyticsData.previousSeries ?? [])
         setComparison(analyticsData.comparison ?? null)
         setBreakdowns(analyticsData.breakdowns ?? null)
+        setEffectiveRange(analyticsData.range ?? range)
+        setPreviousRange(analyticsData.previousRange ?? null)
       })
-      .catch(() => {
-        setAnalyticsError('No se pudieron cargar las métricas del enlace.')
+      .catch((error: unknown) => {
+        if (isAbortError(error)) return
+        setAnalyticsError(
+          'No pudimos cargar los clics humanos de este periodo. Comprueba tu conexión e inténtalo de nuevo.',
+        )
       })
-      .finally(() => setAnalyticsLoading(false))
+      .finally(() => {
+        if (!controller.signal.aborted) setAnalyticsLoading(false)
+      })
+    return () => controller.abort()
   }, [id, range, retryNonce])
 
   if (link === undefined) {
@@ -120,7 +138,7 @@ export function LinkDetailPage({ id }: { id: string }) {
       <div className="grid gap-4 md:grid-cols-3">
         <Info label="Destino" value={link.destination_url} />
         <Info label="Estado" value={link.status} />
-        <Info label="Clics totales" value={String(link.clicks ?? 0)} />
+        <Info label="Clics registrados" value={String(link.clicks ?? 0)} />
       </div>
       <section className="mt-8 grid gap-4 md:grid-cols-2">
         <AssignmentInfo items={link.tags ?? []} title="Etiquetas" />
@@ -130,13 +148,20 @@ export function LinkDetailPage({ id }: { id: string }) {
         <div className="mb-3 flex flex-col justify-between gap-3 md:flex-row md:items-center">
           <div>
             <div className="flex min-h-5 items-center gap-1">
-              <h2 className="text-sm font-medium leading-5">Clics en el tiempo</h2>
-              <InfoTooltip label="Información sobre Clics en el tiempo">
-                Muestra los clics diarios del rango seleccionado. “Comparar” superpone
-                el periodo inmediatamente anterior con la misma duración.
+              <h2 className="text-sm font-medium leading-5">Clics humanos en el tiempo</h2>
+              <InfoTooltip label="Información sobre Clics humanos en el tiempo">
+                Excluye crawlers y previews. Los días se agrupan en UTC. “Comparar
+                anterior” superpone el periodo inmediatamente anterior con la misma
+                duración.
               </InfoTooltip>
             </div>
-            {comparison ? <ComparisonSummary comparison={comparison} /> : null}
+            {comparison && effectiveRange ? (
+              <ComparisonSummary
+                comparison={comparison}
+                currentRange={effectiveRange}
+                previousRange={previousRange}
+              />
+            ) : null}
           </div>
           <DateRangePicker onChange={setRange} value={range} />
         </div>
@@ -179,25 +204,44 @@ function AnalyticsChartSkeleton() {
   )
 }
 
-async function fetchJson<T>(input: RequestInfo | URL): Promise<T> {
-  const response = await fetch(input)
+async function fetchJson<T>(input: RequestInfo | URL, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(input, { signal })
   if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
   return response.json() as Promise<T>
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError'
 }
 
 type AnalyticsComparison = {
   currentClicks: number
   previousClicks: number
   delta: number
-  deltaPercent: number
+  deltaPercent: number | null
   trend: 'up' | 'down' | 'flat'
 }
 
-function ComparisonSummary({ comparison }: { comparison: AnalyticsComparison }) {
+function ComparisonSummary({
+  comparison,
+  currentRange,
+  previousRange,
+}: {
+  comparison: AnalyticsComparison
+  currentRange: DateRange
+  previousRange: DateRange | null
+}) {
+  const delta =
+    comparison.previousClicks === 0
+      ? comparison.currentClicks > 0
+        ? 'Nuevo · sin base anterior'
+        : 'Sin actividad humana en ambos periodos'
+      : `${formatSignedNumber(comparison.delta)} clics humanos · ${formatSignedPercent(comparison.deltaPercent)} vs periodo anterior`
+
   return (
     <p className="mono mt-1 text-xs text-muted-foreground">
-      {formatSignedNumber(comparison.delta)} clics ·{' '}
-      {formatSignedPercent(comparison.deltaPercent)} vs periodo anterior
+      {delta} · {formatRange(currentRange)}
+      {previousRange ? ` vs ${formatRange(previousRange)}` : ''} · UTC
     </p>
   )
 }
@@ -206,8 +250,22 @@ function formatSignedNumber(value: number) {
   return `${value > 0 ? '+' : ''}${new Intl.NumberFormat('es').format(value)}`
 }
 
-function formatSignedPercent(value: number) {
+function formatSignedPercent(value: number | null) {
+  if (value === null) return 'Sin base anterior'
   return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`
+}
+
+function formatRange(range: DateRange) {
+  return `${formatDate(range.from)}–${formatDate(range.to)}`
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('es', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${value}T00:00:00.000Z`))
 }
 
 function AssignmentInfo({

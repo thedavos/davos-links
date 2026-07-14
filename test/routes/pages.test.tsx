@@ -311,8 +311,8 @@ describe('dashboard pages', () => {
             botClicks: 3,
             linksWithActivity: 1,
             averageDailyHumanClicks: 1.7,
-            activeLinksNow: 4,
           },
+          activeLinksNow: 4,
           series: [
             { metric_date: '2026-07-07', human_clicks: 12, bot_clicks: 3 },
           ],
@@ -320,11 +320,12 @@ describe('dashboard pages', () => {
             { metric_date: '2026-06-30', human_clicks: 0, bot_clicks: 0 },
           ],
           comparison: {
-            currentClicks: 12,
-            previousClicks: 0,
-            delta: 12,
-            deltaPercent: 100,
-            baselineStatus: 'no_previous_data',
+            humanClicks: {
+              status: 'new',
+              absolute: 12,
+              percent: null,
+              trend: 'up',
+            },
           },
           topLinks: [
             {
@@ -333,7 +334,12 @@ describe('dashboard pages', () => {
               shortPath: link.short_path,
               humanClicks: 12,
               sharePercent: 100,
-              delta: null,
+              delta: {
+                status: 'new',
+                absolute: 12,
+                percent: null,
+                trend: 'up',
+              },
             },
           ],
           breakdowns: {

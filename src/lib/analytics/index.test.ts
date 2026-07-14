@@ -344,7 +344,7 @@ describe('analytics helpers', () => {
     expect(csv).toContain(',10,7,3,5')
   })
 
-  it('returns link analytics without changing its existing contract', async () => {
+  it('uses human clicks consistently in link analytics and exposes UTC scope', async () => {
     installCloudflareMocks({
       dbResults: [
         [{ metric_date: '2026-07-07', clicks: 2, bot_clicks: 0 }],
@@ -356,13 +356,15 @@ describe('analytics helpers', () => {
     expect(linkAnalytics).toMatchObject({
       comparison: {
         currentClicks: 2,
-        previousClicks: 5,
-        delta: -3,
-        deltaPercent: -60,
+        previousClicks: 4,
+        delta: -2,
+        deltaPercent: -50,
         trend: 'down',
       },
       range: { from: '2026-06-08', to: '2026-07-07' },
       previousRange: { from: '2026-05-09', to: '2026-06-07' },
+      scope: 'human',
+      timezone: 'UTC',
       breakdowns: {
         status: 'unavailable',
         reason: 'not_configured',
@@ -373,7 +375,32 @@ describe('analytics helpers', () => {
     expect(linkAnalytics.series.at(-1)).toEqual({
       metric_date: '2026-07-07',
       clicks: 2,
+      human_clicks: 2,
       bot_clicks: 0,
+      recorded_clicks: 2,
+    })
+  })
+
+  it('does not report negative human clicks or invent a comparison percent', async () => {
+    installCloudflareMocks({
+      dbResults: [
+        [{ metric_date: '2026-07-07', clicks: 1, bot_clicks: 3 }],
+        [{ metric_date: '2026-06-07', clicks: 0, bot_clicks: 0 }],
+      ],
+    })
+
+    const linkAnalytics = await getLinkAnalytics('lnk_test')
+    expect(linkAnalytics.series.at(-1)).toMatchObject({
+      clicks: 0,
+      human_clicks: 0,
+      bot_clicks: 3,
+      recorded_clicks: 1,
+    })
+    expect(linkAnalytics.comparison).toMatchObject({
+      currentClicks: 0,
+      previousClicks: 0,
+      delta: 0,
+      deltaPercent: null,
     })
   })
 })
