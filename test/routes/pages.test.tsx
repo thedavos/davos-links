@@ -4,13 +4,12 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ComparisonTrendChart,
-  DailyActivityBarChart,
-  MetricSparkline,
 } from '#/components/Charts'
 import { DashboardShell, PageHeader } from '#/components/DashboardShell'
 import { DitherAvatar } from '#/components/dither-kit'
@@ -111,42 +110,27 @@ describe('public and shared UI', () => {
     })
   })
 
-  it('renders the public home and shared chart states', () => {
+  it('renders the public home and the comparison chart states', () => {
     render(<HomePage />)
     expect(
       screen.getByRole('heading', { name: /Enlaces breves.*Resultados claros/i }),
     ).toBeInTheDocument()
     expect(screen.getByText('links.davosdo.dev')).toBeInTheDocument()
 
-    const { rerender } = render(<MetricSparkline data={[]} label="Sparkline vacía" />)
-    expect(screen.getByText('Sin datos')).toBeInTheDocument()
-
-    rerender(
-      <MetricSparkline
-        data={[{ metric_date: '2026-07-07', clicks: 10 }]}
-        label="Sparkline de clics"
-      />,
-    )
-    expect(
-      document.querySelector(
-        '[data-chart-label="Sparkline de clics"] [data-chart-animation]',
-      ),
-    ).toHaveAttribute('data-chart-animation', 'off')
-
-    rerender(
+    const { rerender } = render(
       <ComparisonTrendChart
         current={[
-          { metric_date: '2026-07-06', clicks: 5 },
-          { metric_date: '2026-07-07', clicks: 10 },
+          { metric_date: '2026-07-06', human_clicks: 5 },
+          { metric_date: '2026-07-07', human_clicks: 10 },
         ]}
         previous={[
-          { metric_date: '2026-06-29', clicks: 3 },
-          { metric_date: '2026-06-30', clicks: 4 },
+          { metric_date: '2026-06-29', human_clicks: 3 },
+          { metric_date: '2026-06-30', human_clicks: 4 },
         ]}
       />,
     )
     const currentView = screen.getByRole('button', {
-      name: 'Mostrar solo el periodo actual',
+      name: 'Mostrar solo el periodo seleccionado',
     })
     const compareView = screen.getByRole('button', {
       name: 'Comparar con el periodo anterior',
@@ -159,82 +143,38 @@ describe('public and shared UI', () => {
     expect(currentView).toHaveAttribute('aria-pressed', 'false')
     expect(compareView).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Periodo anterior')).toBeInTheDocument()
-    const currentLegend = screen.getByRole('button', { name: 'Actual' })
+    const currentLegend = screen.getByRole('button', { name: 'Periodo seleccionado' })
     expect(currentLegend).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(currentLegend)
     expect(currentLegend).toHaveAttribute('aria-pressed', 'true')
     const comparison = screen.getByRole('group', {
-      name: /Clics en el tiempo comparados/i,
+      name: /Clics humanos del periodo seleccionado comparados/i,
     })
     expect(comparison).toHaveAttribute('data-chart-animation', 'off')
-    expect(comparison).toHaveAttribute('data-chart-sparkles', 'burst')
+    expect(comparison).toHaveAttribute('data-chart-sparkles', 'off')
     fireEvent.focus(comparison)
     expect(screen.getByRole('status')).toHaveTextContent(
-      /07 jul.*10 clics actuales.*4 del periodo anterior/i,
+      /7 de julio de 2026.*10 clics humanos.*30 de junio de 2026.*4 del periodo anterior/i,
     )
     fireEvent.keyDown(comparison, { key: 'Home' })
     expect(screen.getByRole('status')).toHaveTextContent(
-      /06 jul.*5 clics actuales.*3 del periodo anterior/i,
+      /6 de julio de 2026.*5 clics humanos.*29 de junio de 2026.*3 del periodo anterior/i,
     )
     fireEvent.keyDown(comparison, { key: 'Escape' })
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
 
     fireEvent.click(currentView)
     const currentChart = screen.getByRole('group', {
-      name: /Clics en el tiempo del periodo actual/i,
+      name: 'Clics humanos del periodo seleccionado',
     })
     fireEvent.focus(currentChart)
-    expect(screen.getByRole('status')).toHaveTextContent(/07 jul.*10 clics actuales/i)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /7 de julio de 2026.*10 clics humanos/i,
+    )
     expect(screen.getByRole('status')).not.toHaveTextContent(/periodo anterior/i)
 
-    rerender(
-      <DailyActivityBarChart
-        data={[
-          { metric_date: '2026-07-06', clicks: 0 },
-          { metric_date: '2026-07-07', clicks: 8 },
-        ]}
-      />,
-    )
-    expect(screen.getByText('Una barra por fecha')).toBeInTheDocument()
-    const activity = screen.getByRole('group', { name: 'Actividad diaria de clics' })
-    expect(activity).toHaveAttribute('data-chart-animation', 'off')
-    expect(activity).toHaveAttribute('data-chart-sparkles', 'burst')
-    fireEvent.focus(activity)
-    expect(screen.getByRole('status')).toHaveTextContent(/07 jul.*8 clics/i)
-    fireEvent.keyDown(activity, { key: 'ArrowLeft' })
-    expect(screen.getByRole('status')).toHaveTextContent(/06 jul.*0 clics/i)
-  })
-
-  it.each([1, 7, 30, 90])(
-    'keeps %i daily points keyboard-accessible with at most eight date labels',
-    (days) => {
-      const data = Array.from({ length: days }, (_, index) => ({
-        clicks: index,
-        metric_date: new Date(Date.UTC(2026, 0, index + 1)).toISOString().slice(0, 10),
-      }))
-      const { container } = render(<DailyActivityBarChart data={data} />)
-      const chart = screen.getByRole('group', { name: 'Actividad diaria de clics' })
-
-      fireEvent.focus(chart)
-      fireEvent.keyDown(chart, { key: 'Home' })
-      expect(screen.getByRole('status')).toHaveTextContent(/01 ene.*0 clics/i)
-      fireEvent.keyDown(chart, { key: 'End' })
-      expect(screen.getByRole('status')).toHaveTextContent(
-        new RegExp(`${days - 1} clics`, 'i'),
-      )
-      expect(
-        container.querySelectorAll('text[dominant-baseline="hanging"]').length,
-      ).toBeLessThanOrEqual(8)
-    },
-  )
-
-  it('renders empty analytical charts without focusable chart shells', () => {
-    const { rerender } = render(<ComparisonTrendChart current={[]} />)
-    expect(screen.getByText('Todavía no hay datos')).toBeInTheDocument()
-    expect(screen.queryByRole('group')).not.toBeInTheDocument()
-
-    rerender(<DailyActivityBarChart data={[]} />)
-    expect(screen.getByText('Todavía no hay datos')).toBeInTheDocument()
+    rerender(<ComparisonTrendChart current={[]} />)
+    expect(screen.getByText('No hay clics humanos en este periodo')).toBeInTheDocument()
     expect(screen.queryByRole('group')).not.toBeInTheDocument()
   })
 
@@ -364,45 +304,181 @@ describe('dashboard pages', () => {
     routerMocks.navigate.mockClear()
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValueOnce(
-          Response.json({
-            totals: { totalClicks: 12, clicks7d: 5, clicks30d: 10, activeLinks: 1 },
-            series: [{ metric_date: '2026-07-07', clicks: 12 }],
-            breakdowns: {
-              status: 'ready',
-              source: 'demo',
-              scope: 'human',
-              totalClicks: 10,
-              coverage: {
-                from: '2026-07-01',
-                to: '2026-07-07',
-                truncated: false,
-                retention: 'local_demo',
-              },
-              referrers: [{ value: 'google.com', clicks: 4, percentage: 40 }],
-              countries: [{ value: 'PE', clicks: 5, percentage: 50 }],
-              devices: [{ value: 'Mobile', clicks: 6, percentage: 60 }],
+      vi.fn(async () =>
+        Response.json({
+          totals: {
+            humanClicks: 12,
+            botClicks: 3,
+            linksWithActivity: 1,
+            averageDailyHumanClicks: 1.7,
+            activeLinksNow: 4,
+          },
+          series: [
+            { metric_date: '2026-07-07', human_clicks: 12, bot_clicks: 3 },
+          ],
+          previousSeries: [
+            { metric_date: '2026-06-30', human_clicks: 0, bot_clicks: 0 },
+          ],
+          comparison: {
+            currentClicks: 12,
+            previousClicks: 0,
+            delta: 12,
+            deltaPercent: 100,
+            baselineStatus: 'no_previous_data',
+          },
+          topLinks: [
+            {
+              id: link.id,
+              title: link.title,
+              shortPath: link.short_path,
+              humanClicks: 12,
+              sharePercent: 100,
+              delta: null,
             },
-          }),
-        )
-        .mockResolvedValueOnce(Response.json({ links: [link] })),
+          ],
+          breakdowns: {
+            status: 'ready',
+            source: 'demo',
+            scope: 'human',
+            totalClicks: 12,
+            coverage: {
+              from: '2026-07-01',
+              to: '2026-07-07',
+              truncated: false,
+              retention: 'local_demo',
+            },
+            referrers: [{ value: 'google.com', clicks: 6, percentage: 50 }],
+            countries: [{ value: 'PE', clicks: 7, percentage: 58.3 }],
+            devices: [{ value: 'Mobile', clicks: 8, percentage: 66.7 }],
+          },
+          range: { from: '2026-07-01', to: '2026-07-07' },
+          previousRange: { from: '2026-06-24', to: '2026-06-30' },
+          timezone: 'UTC',
+        }),
+      ),
     )
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn() },
     })
   })
 
-  it('renders dashboard overview with fetched metrics and top links', async () => {
+  it('renders coherent period metrics, current status, and ranked links', async () => {
     render(<OverviewPage />)
-    expect(await screen.findByText('Clics totales')).toBeInTheDocument()
+    expect(await screen.findByText('Clics humanos')).toBeInTheDocument()
+    expect(screen.getByText('Enlaces con actividad')).toBeInTheDocument()
+    expect(screen.getByText('Promedio diario')).toBeInTheDocument()
+    expect(screen.getByText('Tráfico automatizado')).toBeInTheDocument()
+    expect(screen.getByText('Ahora')).toBeInTheDocument()
+    expect(
+      screen.getByRole('complementary', { name: 'Estado actual' }),
+    ).toHaveTextContent('4 enlaces activos')
+    expect(screen.getByText('Enlaces con más clics')).toBeInTheDocument()
     expect(await screen.findByText('/railway')).toBeInTheDocument()
-    expect(screen.getAllByText('12').length).toBeGreaterThan(0)
-    expect(screen.getByText('Desglose global del tráfico')).toBeInTheDocument()
+    expect(screen.getByText('Nuevo vs. periodo anterior')).toBeInTheDocument()
+    expect(screen.queryByText(/100% vs\. periodo anterior/i)).not.toBeInTheDocument()
+    expect(screen.getAllByText(/1 jul–7 jul 2026/i).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Clics totales')).not.toBeInTheDocument()
+    expect(screen.queryByText('Últimos 7 días')).not.toBeInTheDocument()
+    expect(screen.queryByText('Últimos 30 días')).not.toBeInTheDocument()
+    expect(screen.queryByText('Actividad diaria')).not.toBeInTheDocument()
+    expect(screen.getByText('Desglose del tráfico')).toBeInTheDocument()
     expect(screen.getByText('google.com')).toBeInTheDocument()
     expect(screen.getByText('Perú')).toBeInTheDocument()
     expect(screen.getByText('Móvil')).toBeInTheDocument()
+  })
+
+  it('shows actionable overview empty states', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          totals: {
+            humanClicks: 0,
+            botClicks: 0,
+            linksWithActivity: 0,
+            averageDailyHumanClicks: 0,
+            activeLinksNow: 0,
+          },
+          series: [{ metric_date: '2026-07-07', human_clicks: 0, bot_clicks: 0 }],
+          previousSeries: [
+            { metric_date: '2026-06-30', human_clicks: 0, bot_clicks: 0 },
+          ],
+          comparison: { currentClicks: 0, previousClicks: 0, delta: 0 },
+          topLinks: [],
+          range: { from: '2026-07-01', to: '2026-07-07' },
+          previousRange: { from: '2026-06-24', to: '2026-06-30' },
+          timezone: 'UTC',
+        }),
+      ),
+    )
+
+    render(<OverviewPage />)
+    expect(await screen.findByText('Sin clics en este periodo')).toBeInTheDocument()
+    expect(screen.getByText('Sin enlaces con actividad')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Crear enlace' })).toHaveLength(2)
+    expect(screen.getByText('Sin base anterior')).toBeInTheDocument()
+  })
+
+  it('updates period metrics, ranking, and export when a preset changes', async () => {
+    const rangeRequests: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        const params = new URL(url, 'https://links.davosdo.dev').searchParams
+        const from = params.get('from') ?? '2026-07-01'
+        const to = params.get('to') ?? '2026-07-30'
+        const days = Math.round(
+          (Date.parse(`${to}T00:00:00.000Z`) - Date.parse(`${from}T00:00:00.000Z`)) /
+            86_400_000,
+        ) + 1
+        rangeRequests.push(url)
+        return Response.json({
+          totals: {
+            humanClicks: days,
+            botClicks: 0,
+            linksWithActivity: 1,
+            averageDailyHumanClicks: 1,
+            activeLinksNow: 2,
+          },
+          series: [{ metric_date: to, human_clicks: days, bot_clicks: 0 }],
+          previousSeries: [{ metric_date: from, human_clicks: days - 1, bot_clicks: 0 }],
+          comparison: {
+            currentClicks: days,
+            previousClicks: days - 1,
+            delta: 1,
+            deltaPercent: 100 / Math.max(1, days - 1),
+          },
+          topLinks: [
+            {
+              id: 'lnk_range',
+              title: `Enlace ${days} días`,
+              shortPath: `periodo-${days}`,
+              humanClicks: days,
+              sharePercent: 100,
+              delta: 1,
+            },
+          ],
+          range: { from, to },
+          previousRange: { from, to },
+          timezone: 'UTC',
+        })
+      }),
+    )
+
+    render(<OverviewPage />)
+    await screen.findByText('Enlace 30 días')
+    fireEvent.click(screen.getByRole('button', { name: '7d' }))
+
+    expect(await screen.findByText('Enlace 7 días')).toBeInTheDocument()
+    const metrics = screen.getByRole('region', { name: 'Métricas del periodo' })
+    expect(within(metrics).getByText('7')).toBeInTheDocument()
+    expect(screen.getByText('/periodo-7')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Exportar CSV/i })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/from=.*&to=.*/),
+    )
+    expect(rangeRequests.at(-1)).toContain('/api/analytics/overview?from=')
   })
 
   it('renders links table and action buttons', async () => {
