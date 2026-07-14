@@ -2,11 +2,12 @@ import { Link } from '@tanstack/react-router'
 import { Download, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
-  ActivityHeatmap,
   ComparisonTrendChart,
+  DailyActivityBarChart,
   MetricSparkline,
   type ChartPoint,
 } from '#/components/Charts'
+import type { DitherColor } from '#/components/dither-kit'
 import { PageHeader } from '#/components/DashboardShell'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
@@ -129,18 +130,21 @@ export function OverviewPage() {
       ) : null}
       <div className="grid gap-3 md:grid-cols-4">
         <MetricCard
+          color="blue"
           label="Clics totales"
           previousSeries={overview.previousSeries}
           series={overview.series}
           value={overview.totals.totalClicks}
         />
         <MetricCard
+          color="purple"
           label="Últimos 7 días"
           previousSeries={overview.previousSeries.slice(-7)}
           series={overview.series.slice(-7)}
           value={overview.totals.clicks7d}
         />
         <MetricCard
+          color="pink"
           label="Últimos 30 días"
           previousSeries={overview.previousSeries.slice(-30)}
           series={overview.series.slice(-30)}
@@ -183,18 +187,20 @@ export function OverviewPage() {
       </section>
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-medium">Actividad diaria</h2>
-        <ActivityHeatmap data={overview.heatmap} />
+        <DailyActivityBarChart data={overview.series} />
       </section>
     </>
   )
 }
 
 function MetricCard({
+  color,
   label,
   previousSeries,
   series,
   value,
 }: {
+  color?: DitherColor
   label: string
   previousSeries?: ChartPoint[]
   series?: ChartPoint[]
@@ -218,7 +224,7 @@ function MetricCard({
       </div>
       {series ? (
         <div className="mt-4">
-          <MetricSparkline data={series} label={`${label} en el tiempo`} />
+          <MetricSparkline color={color} data={series} label={`${label} en el tiempo`} />
         </div>
       ) : (
         <p className="mt-5 text-xs text-muted-foreground">Sin histórico diario</p>
