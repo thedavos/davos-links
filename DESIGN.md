@@ -1,13 +1,29 @@
-# Davos Links Design
+# atajo / Davos Links Design
 
-Davos Links should feel like a precise developer tool with an energetic Tripwire-inspired vivid-light finish.
+atajo should feel like a precise developer tool with an energetic
+Tripwire-inspired vivid-light finish. Davos Links remains the technical project
+name and does not appear as the public product identity.
+
+## Identity
+
+- Public wordmark: `atajo`, always lowercase.
+- Spacious lockup: `atajo by davosdo`.
+- Tagline: `La ruta corta.`
+- Mark: a geometric A built from two converging route ribbons with a diagonal
+  negative-space shortcut. Do not substitute a chain-link icon.
+- Core palette: warm white `#FAF9F6`, ink `#151515`, atajo blue `#275DFF`,
+  and route coral `#FF6B4A`.
+- Blue and coral may use their documented light/dark scales. User-selected tag
+  swatches are content and are the only arbitrary-color exception.
+- Use the color/dither atmosphere on major surfaces and social assets; keep
+  repeated icons and compact brand applications clean.
 
 ## Direction
 
 - Light-only interface with controlled dither texture and bloom.
 - Geist Sans for primary UI text.
 - Geist Mono for IDs, short paths, timestamps, URLs, and metrics.
-- Warm white surfaces, dark ink, and a vivid semantic palette.
+- Warm white surfaces, dark ink, and a focused blue/coral semantic palette.
 - Tinted crisp borders, compact spacing, and exact alignment.
 
 ## Principles
@@ -43,11 +59,10 @@ Avoid nested cards, oversized marketing sections inside the app, permanent spark
 
 - Base background: warm off-white with white cards and popovers.
 - Text: near-black foreground; muted copy remains at least WCAG AA on its surface.
-- Blue: primary actions and the current analytics series.
-- Purple: navigation, focus-adjacent secondary actions, and previous-period analytics.
-- Green: success and active status; orange: warnings and inactive status.
-- Red: errors and destructive actions; pink: campaigns and secondary accents.
-- Borders: subtly purple-tinted; focus rings: vivid blue with a visible offset.
+- Blue: primary actions, navigation, focus, information, success/active, and the current analytics series.
+- Coral: previous-period analytics, campaigns, warnings, inactive states, errors, and destructive actions.
+- Previous-period series use dashed strokes; warnings and destructive states use distinct icons, labels, intensity, and patterns.
+- Borders: warm neutral; focus rings: accessible blue with a visible offset.
 - Dither: Canvas on hero/login/sidebar and labeled CTAs; static CSS Bayer pattern on repeated, ghost, and icon controls.
 - Bloom: low and interaction-bound; continuous sparkles are disabled.
 - Radius: small and consistent, with slightly larger dialogs/cards than inputs.

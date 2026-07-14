@@ -2,7 +2,7 @@ import { Outlet, createRootRoute } from '@tanstack/react-router'
 
 import appCss from '#/styles.css?url'
 import { RootDocument } from '#/components/RootDocument'
-import { PRODUCT_NAME, PUBLIC_ORIGIN } from '#/lib/constants'
+import { BRAND_FULL_NAME, BRAND_NAME, PUBLIC_ORIGIN } from '#/lib/constants'
 
 const siteDescription = 'Enlaces cortos con marca propia y métricas claras.'
 const ogImageUrl = `${PUBLIC_ORIGIN}/og-image.png`
@@ -17,26 +17,26 @@ export const Route = createRootRoute({
         name: 'viewport',
         content: 'width=device-width, initial-scale=1',
       },
-      { title: PRODUCT_NAME },
+      { title: BRAND_FULL_NAME },
       {
         name: 'description',
         content: siteDescription,
       },
       {
         name: 'application-name',
-        content: PRODUCT_NAME,
+        content: BRAND_FULL_NAME,
       },
       {
         name: 'theme-color',
-        content: '#ffffff',
+        content: '#faf9f6',
       },
       {
         property: 'og:site_name',
-        content: PRODUCT_NAME,
+        content: BRAND_FULL_NAME,
       },
       {
         property: 'og:title',
-        content: PRODUCT_NAME,
+        content: BRAND_FULL_NAME,
       },
       {
         property: 'og:description',
@@ -64,7 +64,7 @@ export const Route = createRootRoute({
       },
       {
         property: 'og:image:alt',
-        content: `${PRODUCT_NAME} - enlaces cortos con marca propia`,
+        content: `${BRAND_NAME} by davosdo — enlaces cortos con marca propia`,
       },
       {
         name: 'twitter:card',
@@ -72,7 +72,7 @@ export const Route = createRootRoute({
       },
       {
         name: 'twitter:title',
-        content: PRODUCT_NAME,
+        content: BRAND_FULL_NAME,
       },
       {
         name: 'twitter:description',
@@ -82,11 +82,21 @@ export const Route = createRootRoute({
         name: 'twitter:image',
         content: ogImageUrl,
       },
+      {
+        name: 'twitter:image:alt',
+        content: `${BRAND_NAME} by davosdo — enlaces cortos con marca propia`,
+      },
     ],
     links: [
       {
         rel: 'canonical',
         href: PUBLIC_ORIGIN,
+      },
+      {
+        rel: 'icon',
+        href: '/favicon.svg',
+        sizes: 'any',
+        type: 'image/svg+xml',
       },
       {
         rel: 'icon',

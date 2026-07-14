@@ -2,53 +2,70 @@
 @import "tailwindcss";
 
 :root {
-  /* Tripwire vivid-light palette. Semantic colors are intentionally dark enough
-     for AA text contrast on the off-white surfaces. */
-  --background: #fbfaf6;
-  --foreground: #191724;
+  /* atajo two-family palette. Semantic colors use accessible shades of the
+     blue and coral brand families on warm neutral surfaces. */
+  --background: #faf9f6;
+  --foreground: #151515;
   --card: #ffffff;
-  --card-foreground: #191724;
+  --card-foreground: #151515;
   --popover: #ffffff;
-  --popover-foreground: #191724;
-  --primary: #0759d6;
+  --popover-foreground: #151515;
+  --primary: #164bd8;
   --primary-foreground: #ffffff;
-  --secondary: #eee9ff;
-  --secondary-foreground: #4f2bbd;
-  --muted: #f1efe8;
-  --muted-foreground: #625f6d;
-  --accent: #ffe3f0;
-  --accent-foreground: #9b1757;
-  --destructive: #c92832;
+  --secondary: #f2f5ff;
+  --secondary-foreground: #12348e;
+  --muted: #f2f0ea;
+  --muted-foreground: #625f59;
+  --accent: #fff5f2;
+  --accent-foreground: #b93420;
+  --destructive: #b93420;
   --destructive-foreground: #ffffff;
-  --success: #147a42;
+  --success: #123db2;
   --success-foreground: #ffffff;
-  --warning: #a84700;
+  --warning: #b93420;
   --warning-foreground: #ffffff;
-  --info: #0759d6;
+  --info: #164bd8;
   --info-foreground: #ffffff;
-  /* Official Dither Kit fill seeds from the pinned upstream snapshot. */
-  --blue: #358ff3;
-  --purple: #966eff;
-  /* Product purple scale. Keep the vivid Dither seed at 500 while darker
-     shades carry text and navigation contrast on light surfaces. */
-  --purple-50: #f8f6ff;
-  --purple-100: #eee9ff;
-  --purple-200: #ded5ff;
-  --purple-300: #c8b9ff;
-  --purple-400: #ad94ff;
-  --purple-500: #966eff;
-  --purple-600: #7852e6;
-  --purple-700: #613bc9;
-  --purple-800: #4f2bbd;
-  --purple-900: #3a208b;
-  --purple-950: #24144f;
-  --pink: #f05abe;
-  --green: #28d26e;
-  --orange: #ff9632;
-  --red: #f04646;
-  --border: #dcd6eb;
-  --input: #9a90aa;
-  --ring: #0759d6;
+  /* Brand scales. 500 values are the identity seeds used by Dither Kit;
+     darker shades carry text and control contrast on light surfaces. */
+  --blue: #275dff;
+  --blue-50: #f2f5ff;
+  --blue-100: #e4eaff;
+  --blue-200: #c6d3ff;
+  --blue-300: #9fb5ff;
+  --blue-400: #6e8cff;
+  --blue-500: #275dff;
+  --blue-600: #164bd8;
+  --blue-700: #123db2;
+  --blue-800: #12348e;
+  --blue-900: #142e6f;
+  --blue-950: #0d1b45;
+  --coral: #ff6b4a;
+  --coral-50: #fff5f2;
+  --coral-100: #ffe7e0;
+  --coral-200: #ffcfc4;
+  --coral-300: #ffaa98;
+  --coral-400: #ff8268;
+  --coral-500: #ff6b4a;
+  --coral-600: #d94b31;
+  --coral-700: #b93420;
+  --coral-800: #922b1e;
+  --coral-900: #76271f;
+  --coral-950: #40110b;
+  --neutral-50: #faf9f6;
+  --neutral-100: #f2f0ea;
+  --neutral-200: #dedad0;
+  --neutral-300: #c5c1b8;
+  --neutral-400: #a5a199;
+  --neutral-500: #7b7770;
+  --neutral-600: #625f59;
+  --neutral-700: #47443f;
+  --neutral-800: #2c2a27;
+  --neutral-900: #151515;
+  --neutral-950: #0b0b0a;
+  --border: #dedad0;
+  --input: #8a8780;
+  --ring: #164bd8;
   --radius: 0.625rem;
   color-scheme: light;
   font-family:
@@ -82,22 +99,40 @@
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
   --color-blue: var(--blue);
-  --color-purple: var(--purple);
-  --color-purple-50: var(--purple-50);
-  --color-purple-100: var(--purple-100);
-  --color-purple-200: var(--purple-200);
-  --color-purple-300: var(--purple-300);
-  --color-purple-400: var(--purple-400);
-  --color-purple-500: var(--purple-500);
-  --color-purple-600: var(--purple-600);
-  --color-purple-700: var(--purple-700);
-  --color-purple-800: var(--purple-800);
-  --color-purple-900: var(--purple-900);
-  --color-purple-950: var(--purple-950);
-  --color-pink: var(--pink);
-  --color-green: var(--green);
-  --color-orange: var(--orange);
-  --color-red: var(--red);
+  --color-blue-50: var(--blue-50);
+  --color-blue-100: var(--blue-100);
+  --color-blue-200: var(--blue-200);
+  --color-blue-300: var(--blue-300);
+  --color-blue-400: var(--blue-400);
+  --color-blue-500: var(--blue-500);
+  --color-blue-600: var(--blue-600);
+  --color-blue-700: var(--blue-700);
+  --color-blue-800: var(--blue-800);
+  --color-blue-900: var(--blue-900);
+  --color-blue-950: var(--blue-950);
+  --color-coral: var(--coral);
+  --color-coral-50: var(--coral-50);
+  --color-coral-100: var(--coral-100);
+  --color-coral-200: var(--coral-200);
+  --color-coral-300: var(--coral-300);
+  --color-coral-400: var(--coral-400);
+  --color-coral-500: var(--coral-500);
+  --color-coral-600: var(--coral-600);
+  --color-coral-700: var(--coral-700);
+  --color-coral-800: var(--coral-800);
+  --color-coral-900: var(--coral-900);
+  --color-coral-950: var(--coral-950);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  --color-neutral-950: var(--neutral-950);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -123,7 +158,7 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--pink) 28%, white);
+  background: var(--coral-100);
   color: var(--foreground);
 }
 
@@ -155,6 +190,39 @@ body {
     transparent 0.9px
   );
   background-size: 4px 4px;
+}
+
+.analytics-heatmap-grid {
+  display: grid;
+  grid-template-columns: 3rem repeat(24, minmax(1.5rem, 1fr));
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.analytics-heat-cell {
+  background-color: var(--blue-50);
+  background-position: 0 0;
+  background-size: 4px 4px;
+}
+
+.analytics-heat-cell[data-level="1"] {
+  background-color: var(--blue-50);
+  background-image: radial-gradient(circle, var(--blue-400) 0 0.55px, transparent 0.7px);
+}
+
+.analytics-heat-cell[data-level="2"] {
+  background-color: var(--blue-100);
+  background-image: radial-gradient(circle, var(--blue-500) 0 0.75px, transparent 0.9px);
+}
+
+.analytics-heat-cell[data-level="3"] {
+  background-color: var(--blue-200);
+  background-image: radial-gradient(circle, var(--blue-600) 0 1px, transparent 1.1px);
+}
+
+.analytics-heat-cell[data-level="4"] {
+  background-color: var(--blue-600);
+  background-image: radial-gradient(circle, var(--blue-100) 0 0.7px, transparent 0.85px);
 }
 
 @keyframes notification-enter {

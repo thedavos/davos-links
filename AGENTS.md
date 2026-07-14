@@ -1,8 +1,11 @@
-# Davos Links Agent Rules
+# Davos Links / atajo Agent Rules
 
 ## Preserve These Decisions
 
-- Product name: Davos Links
+- Project and infrastructure name: Davos Links / `davos-links`
+- Public brand: `atajo`
+- Public brand signature: `atajo by davosdo`
+- Brand tagline: `La ruta corta.`
 - Public domain: `links.davosdo.dev`
 - Dashboard route: `/dashboard`
 - Public short links: `/:shortPath`
@@ -46,10 +49,13 @@ Also reject paths starting with `dashboard/`, `api/`, `assets/`, `_build/`, or `
 
 ## Design Rules
 
+- Use the geometric atajo A mark; do not replace it with a chain-link icon.
+- Keep the wordmark lowercase and show `by davosdo` on spacious brand surfaces.
 - Use a precise developer-tool layout.
 - Use Geist-style sans and mono typography.
 - Keep the application light-only with white/off-white surfaces and dark text.
-- Use the vivid semantic palette consistently: blue for primary/current, purple for navigation/previous, green for success/active, orange for warning/inactive, red for destructive/error, and pink for campaigns or secondary accents.
+- Use only the atajo blue and route coral families plus warm neutrals: blue for primary/current/info/success and coral for comparison/campaigns/warning/destructive. Preserve meaning with labels, icons, shapes, and patterns.
+- User-selected tag swatches are content and may use arbitrary colors; do not propagate those colors into application chrome.
 - Use controlled dither texture and bloom; reserve Canvas for major surfaces and labeled CTAs, and use the static CSS Bayer pattern for repeated or compact controls.
 - Keep spacing compact and consistent.
 - Keep tables scan-friendly.

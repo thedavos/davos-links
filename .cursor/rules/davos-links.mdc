@@ -1,13 +1,15 @@
 ---
-description: Davos Links product, architecture, and design rules
+description: Davos Links architecture and atajo public identity rules
 globs:
   - "**/*"
 alwaysApply: true
 ---
 
-# Davos Links
+# Davos Links / atajo
 
 Build Davos Links as a Cloudflare-native URL shortener for `links.davosdo.dev`.
+Keep Davos Links as the technical project name and use `atajo by davosdo` as
+the public-facing identity.
 
 ## Non-Negotiables
 
@@ -35,7 +37,10 @@ Also reject custom paths starting with `dashboard/`, `api/`, `assets/`, `_build/
 
 ## UI Rules
 
-- Vercel-inspired, monochrome, precise.
+- Use the geometric atajo A mark and lowercase wordmark; show `by davosdo` on spacious surfaces.
+- Tripwire-inspired vivid-light, precise developer-tool UI.
 - Geist-style sans and mono typography.
+- Use only atajo blue and route coral plus warm neutrals. Blue carries primary/current/info/success; coral carries comparison/campaigns/warning/destructive.
+- Status must also use text, icons, shapes, or patterns. User-selected tag swatches are the only arbitrary-color exception.
 - Compact controls, fine borders, clear hierarchy.
-- No decorative gradients, glassmorphism, oversized cards, or visual clutter.
+- Use controlled dither on major surfaces; avoid glassmorphism, oversized cards, permanent sparkles, or visual clutter.

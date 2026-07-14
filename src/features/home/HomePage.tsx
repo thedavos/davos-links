@@ -7,6 +7,7 @@ import {
   Link2,
   type LucideIcon,
 } from 'lucide-react'
+import { BrandLockup } from '#/components/brand/BrandLockup'
 import { DitherGradient } from '#/components/dither-kit'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
@@ -28,16 +29,19 @@ export function HomePage() {
 
       <section className="relative z-10 mx-auto grid min-h-dvh max-w-7xl content-center gap-14 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)] lg:items-center lg:gap-20 lg:px-12">
         <div className="max-w-3xl">
-          <div className="mono mb-7 inline-flex items-center gap-2 border border-primary/30 bg-background/85 px-3 py-2 text-xs text-primary">
-            <span className="size-2 bg-primary" aria-hidden="true" />
-            links.davosdo.dev
+          <div className="mb-7 flex flex-wrap items-center gap-3">
+            <BrandLockup className="text-lg text-foreground" markClassName="h-8" />
+            <span className="mono inline-flex items-center gap-2 border border-primary/30 bg-background/85 px-3 py-2 text-xs text-primary">
+              <span className="size-2 bg-primary" aria-hidden="true" />
+              links.davosdo.dev
+            </span>
           </div>
           <h1 className="text-balance text-5xl font-semibold leading-[0.96] tracking-[-0.055em] sm:text-6xl lg:text-7xl">
             Enlaces breves.
             <span className="block text-primary">Resultados claros.</span>
           </h1>
           <p className="mt-7 max-w-xl text-pretty text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
-            Davos Links reúne tus enlaces de marca y sus métricas en un panel
+            atajo reúne tus enlaces de marca y sus métricas en un panel
             rápido, simple y hecho para tomar decisiones.
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -53,8 +57,8 @@ export function HomePage() {
             </Button>
             <Button
               asChild
-              ditherColor="purple"
-              ditherVariant="dotted"
+              ditherColor="blue"
+              ditherVariant="solid"
               variant="ghost"
             >
               <Link to="/login">Iniciar sesión</Link>

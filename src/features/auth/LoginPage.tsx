@@ -1,6 +1,7 @@
 import { Link, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, Link2 } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
+import { BrandLockup } from '#/components/brand/BrandLockup'
 import { DitherGradient } from '#/components/dither-kit'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
@@ -39,7 +40,7 @@ export function LoginPage({ redirectTo = '/dashboard' }: { redirectTo?: string }
         bloom="off"
         cell={4}
         direction="up"
-        from="purple"
+        from="coral"
         opacity={0.16}
         to="blue"
       />
@@ -55,11 +56,8 @@ export function LoginPage({ redirectTo = '/dashboard' }: { redirectTo?: string }
 
         <Card className="border-primary/25 bg-card/95 p-0 shadow-xl shadow-primary/10">
           <div className="border-b border-border px-6 py-5 sm:px-8">
-            <div className="flex size-10 items-center justify-center border border-primary/30 bg-primary/10 text-primary">
-              <Link2 size={18} aria-hidden="true" />
-            </div>
-            <p className="mono mt-5 text-xs text-primary">Davos Links</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Iniciar sesión</h1>
+            <BrandLockup className="text-lg text-foreground" markClassName="h-9" />
+            <h1 className="mt-5 text-3xl font-semibold tracking-tight">Iniciar sesión</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Accede a tus enlaces, campañas y métricas.
             </p>

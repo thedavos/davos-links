@@ -4,6 +4,7 @@ export { Bar, type BarProps } from './bar'
 export { BarChart } from './bar-chart'
 export {
   DitherAvatar,
+  type AvatarColor,
   type AvatarMirror,
   type DitherAvatarProps,
 } from './avatar'

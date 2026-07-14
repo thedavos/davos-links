@@ -45,7 +45,7 @@ export function ActionNotification({
     <section
       aria-atomic="true"
       className={cn(
-        'action-notification fixed right-4 top-4 z-50 flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-lg border bg-popover p-3 text-sm text-popover-foreground shadow-[0_18px_48px_rgb(40_24_72/0.18)] transition-[opacity,transform] duration-150 ease-out motion-safe:animate-[notification-enter_180ms_ease-out]',
+        'action-notification fixed right-4 top-4 z-50 flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-lg border bg-popover p-3 text-sm text-popover-foreground shadow-[0_18px_48px_rgb(21_21_21/0.16)] transition-[opacity,transform] duration-150 ease-out motion-safe:animate-[notification-enter_180ms_ease-out]',
         feedback.kind === 'success'
           ? 'border-success/45'
           : 'border-destructive/55',

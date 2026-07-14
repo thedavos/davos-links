@@ -1,6 +1,8 @@
 # Davos Links Product
 
 Davos Links is a small, production-quality URL shortener for davosdo.dev links.
+Its public product identity is **atajo by davosdo**; Davos Links remains the
+technical project and infrastructure name.
 
 ## Goals
 

@@ -3,7 +3,7 @@ import { cn } from '#/lib/utils'
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-border bg-card shadow-[0_1px_0_color-mix(in_srgb,var(--purple)_8%,transparent)]">
+    <div className="w-full overflow-x-auto rounded-lg border border-border bg-card shadow-[0_1px_0_color-mix(in_srgb,var(--blue)_8%,transparent)]">
       <table
         className={cn('w-full min-w-[900px] border-collapse text-sm', className)}
         data-slot="table"
@@ -52,7 +52,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   return (
     <th
-      className={cn('border-b border-purple/20 px-3 py-2.5 font-semibold', className)}
+      className={cn('border-b border-border px-3 py-2.5 font-semibold', className)}
       data-slot="table-head"
       {...props}
     />

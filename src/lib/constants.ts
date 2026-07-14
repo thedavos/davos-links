@@ -1,4 +1,7 @@
-export const PRODUCT_NAME = 'Davos Links'
+export const BRAND_NAME = 'atajo'
+export const BRAND_BYLINE = 'by davosdo'
+export const BRAND_FULL_NAME = `${BRAND_NAME} ${BRAND_BYLINE}`
+export const BRAND_TAGLINE = 'La ruta corta.'
 export const PUBLIC_ORIGIN = 'https://links.davosdo.dev'
 export const DEFAULT_WORKSPACE_ID = 'wsp_default'
 export const DEFAULT_DOMAIN_ID = 'dom_links_davosdo_dev'

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '#/lib/utils'
 
-type SegmentTone = 'blue' | 'purple'
+type SegmentTone = 'blue' | 'coral'
 
 export type SegmentedControlOption<TValue extends string> = {
   value: TValue
@@ -16,16 +16,14 @@ const toneClasses: Record<
   { active: string; inactive: string; focus: string }
 > = {
   blue: {
-    active:
-      'dither-static border-b-blue-500 bg-blue-50 text-blue-950 shadow-[inset_0_0_0_1px_rgba(53,143,243,0.08)]',
+    active: 'dither-static bg-blue-50 text-blue-950',
     inactive: 'hover:bg-blue-50/60 hover:text-blue-900',
     focus: 'focus-visible:ring-blue-500',
   },
-  purple: {
-    active:
-      'dither-static border-b-purple-500 bg-purple-50 text-purple-950 shadow-[inset_0_0_0_1px_rgba(124,58,237,0.08)]',
-    inactive: 'hover:bg-purple-50/70 hover:text-purple-900',
-    focus: 'focus-visible:ring-purple-500',
+  coral: {
+    active: 'dither-static bg-coral-50 text-coral-950',
+    inactive: 'hover:bg-coral-50 hover:text-coral-900',
+    focus: 'focus-visible:ring-coral-700',
   },
 }
 
@@ -34,19 +32,21 @@ export function SegmentedControl<TValue extends string>({
   className,
   onChange,
   options,
+  size = 'default',
   value,
 }: {
   ariaLabel: string
   className?: string
   onChange: (value: TValue) => void
   options: readonly SegmentedControlOption<TValue>[]
+  size?: 'default' | 'sm'
   value: TValue
 }) {
   return (
     <div
       aria-label={ariaLabel}
       className={cn(
-        'inline-grid auto-cols-fr grid-flow-col overflow-hidden rounded-md border border-purple-200 bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_20px_-18px_rgba(76,29,149,0.8)]',
+        'inline-grid auto-cols-fr grid-flow-col overflow-hidden rounded-md border border-border bg-white',
         className,
       )}
       role="group"
@@ -60,8 +60,9 @@ export function SegmentedControl<TValue extends string>({
             aria-label={option.ariaLabel}
             aria-pressed={selected}
             className={cn(
-              'relative flex min-h-8 items-center justify-center gap-2 border-b-2 border-b-transparent px-3 font-medium text-muted-foreground transition-[background-color,border-color,color,box-shadow] focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset',
-              index > 0 && 'border-l border-l-purple-100',
+              'relative flex min-h-8 items-center justify-center gap-2 px-3 font-medium text-muted-foreground transition-[background-color,color] focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset',
+              size === 'sm' && 'min-h-7 gap-1.5 px-2.5 text-xs',
+              index > 0 && 'border-l border-l-border',
               tone.focus,
               selected ? tone.active : tone.inactive,
             )}

@@ -1,29 +1,29 @@
 import { useEffect, useRef } from "react"
 import { cn } from "./lib"
-import { rgb } from "./palette"
+import { rgb, seedOfColor } from "./palette"
 import {
   BAYER4,
   clamp01,
   fnv1a,
-  hueFill,
   type PixelBloom,
   pixelBloomStyle,
   pixelPrefersReducedMotion,
   xorshift32,
 } from "./pixel"
 
-// 8×8 cells, mirrored across one axis → 32 free pattern bits. With the mirror
-// axis bit and 180 hues that's 2^33 × 180 ≈ 1.5 trillion distinct avatars.
+// 8×8 cells, mirrored across one axis → 32 free pattern bits. The mirror axis
+// and blue/coral family add two more deterministic identity signals.
 const GRID = 8
 const CELL_PX = 4 // backing px per cell → a 32×32 canvas, scaled up pixelated
 
 export type AvatarMirror = "auto" | "horizontal" | "vertical"
+export type AvatarColor = "blue" | "coral"
 
 export type DitherAvatarProps = {
   /** The seed — same name, same avatar, every time. */
   name: string
-  /** Hue override (0–360). Derived from the name when omitted. */
-  hue?: number
+  /** Brand-family override. Derived from the name when omitted. */
+  color?: AvatarColor
   /** Mirror axis. "auto" picks one from the name — half the avatars fold
    * left/right, half fold top/bottom. */
   mirror?: AvatarMirror
@@ -51,24 +51,24 @@ type AvatarModel = {
 
 /**
  * Derive the full 8×8 cell grid from the name: 32 pattern bits + the mirror
- * axis + the hue + per-cell densities, all from one deterministic PRNG stream.
- * Every draw happens unconditionally so overriding `hue` or `mirror` never
+ * axis + the color family + per-cell densities, all from one deterministic PRNG stream.
+ * Every draw happens unconditionally so overriding `color` or `mirror` never
  * shifts the pattern.
  */
 function avatarModel(
   name: string,
-  hueProp: number | undefined,
+  colorProp: AvatarColor | undefined,
   mirrorProp: AvatarMirror
 ): AvatarModel {
   const rand = xorshift32(fnv1a(name))
   const bits = Array.from({ length: 32 }, () => rand() < 0.5)
   const drawnVertical = rand() < 0.5
-  const drawnHue = Math.floor(rand() * 180) * 2
+  const drawnColor: AvatarColor = rand() < 0.5 ? "blue" : "coral"
   const halfDensity = Array.from({ length: 32 }, () => 0.55 + rand() * 0.45)
 
   const vertical =
     mirrorProp === "auto" ? drawnVertical : mirrorProp === "vertical"
-  const hue = hueProp ?? drawnHue
+  const color = colorProp ?? drawnColor
 
   const on = new Array<boolean>(GRID * GRID)
   const density = new Array<number>(GRID * GRID)
@@ -83,7 +83,7 @@ function avatarModel(
       density[r * GRID + c] = halfDensity[i]
     }
   }
-  return { on, density, fill: hueFill(hue) }
+  return { on, density, fill: seedOfColor(color).fill }
 }
 
 /**
@@ -160,11 +160,11 @@ function paintAvatar(
 /**
  * Generative dithered avatar — a mirrored 8×8 pixel glyph derived from a name,
  * rendered with the ordered-dither texture the charts are made of. Same name,
- * same avatar; ~1.5 trillion combinations across pattern, mirror axis, and hue.
+ * same avatar across pattern, mirror axis, and brand color family.
  */
 export function DitherAvatar({
   name,
-  hue,
+  color,
   mirror = "auto",
   size,
   bloom = "off",
@@ -184,11 +184,11 @@ export function DitherAvatar({
     return paintAvatar(
       canvas,
       bloomRef.current,
-      avatarModel(name, hue, mirror),
+      avatarModel(name, color, mirror),
       animate,
       animationDuration
     )
-  }, [name, hue, mirror, animate, animationDuration, replayToken, bloom])
+  }, [name, color, mirror, animate, animationDuration, replayToken, bloom])
 
   const bloomStyle = pixelBloomStyle(bloom)
 

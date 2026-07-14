@@ -34,39 +34,12 @@ export function xorshift32(seed: number): () => number {
   }
 }
 
-/** A named palette colour or a raw hue (0–360). */
-export type PixelColor = DitherColor | number
-
-/** Hue (0–360) → an rgb fill tuned to sit alongside the chart palette. */
-export function hueFill(hue: number): Rgb {
-  const h = ((hue % 360) + 360) % 360
-  const s = 0.85
-  const l = 0.58
-  const c = (1 - Math.abs(2 * l - 1)) * s
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
-  const m = l - c / 2
-  const [r, g, b] =
-    h < 60
-      ? [c, x, 0]
-      : h < 120
-        ? [x, c, 0]
-        : h < 180
-          ? [0, c, x]
-          : h < 240
-            ? [0, x, c]
-            : h < 300
-              ? [x, 0, c]
-              : [c, 0, x]
-  return [
-    Math.round((r + m) * 255),
-    Math.round((g + m) * 255),
-    Math.round((b + m) * 255),
-  ]
-}
+/** A named color from the atajo blue/coral system or neutral grey. */
+export type PixelColor = DitherColor
 
 /** Resolve a {@link PixelColor} to its rgb fill. */
 export function fillOf(color: PixelColor): Rgb {
-  return typeof color === "number" ? hueFill(color) : PALETTE[color].fill
+  return PALETTE[color].fill
 }
 
 // Bloom — same recipe as the charts: a blurred copy of the crisp canvas,
