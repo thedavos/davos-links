@@ -105,7 +105,9 @@ Reserved paths are blocked for custom short links: `dashboard`, `api`, `health`,
 
 ## Design
 
-The dashboard follows a Vercel-inspired developer-tool system: Geist-style sans and mono typography, black/white/neutral gray palette, crisp borders, compact controls, minimal motion, and no decorative clutter.
+The dashboard uses a Tripwire-inspired vivid-light system: Geist-style sans and mono typography, warm white surfaces, dark text, vivid semantic colors, tinted borders, controlled dither textures, compact controls, and reduced-motion-safe animation. Blue represents primary/current data, purple navigation/previous data, green success/active, orange warning/inactive, red destructive/error, and pink campaigns or secondary accents. The app remains light-only and targets WCAG AA contrast.
+
+The vendored Dither Kit subset lives in `src/components/dither-kit/` and is pinned to upstream commit `9fb0b141d2caab257bd75f02834bbe529cf741d0`. It includes only the chart, sparkline, button, avatar, gradient, and core primitives required by the product; local wrappers preserve Davos Links semantics and accessibility.
 
 Optional review tools:
 

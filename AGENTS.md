@@ -9,7 +9,7 @@
 - Framework/runtime: TanStack Start on Cloudflare Workers
 - Data: Cloudflare D1, KV, Workers Analytics Engine
 - Auth: Better Auth at `/api/auth/*`
-- UI: Vercel-inspired developer-tool surface
+- UI: Tripwire-inspired vivid-light developer-tool surface
 
 ## Stack Boundaries
 
@@ -48,10 +48,13 @@ Also reject paths starting with `dashboard/`, `api/`, `assets/`, `_build/`, or `
 
 - Use a precise developer-tool layout.
 - Use Geist-style sans and mono typography.
-- Use black, white, and neutral grays.
+- Keep the application light-only with white/off-white surfaces and dark text.
+- Use the vivid semantic palette consistently: blue for primary/current, purple for navigation/previous, green for success/active, orange for warning/inactive, red for destructive/error, and pink for campaigns or secondary accents.
+- Use controlled dither texture and bloom; reserve Canvas for major surfaces and labeled CTAs, and use the static CSS Bayer pattern for repeated or compact controls.
 - Keep spacing compact and consistent.
 - Keep tables scan-friendly.
-- Avoid decorative gradients, glass effects, oversized cards, and ornamental icons.
+- Maintain WCAG AA contrast, visible focus rings, non-color status cues, and reduced-motion behavior.
+- Avoid glass effects, oversized cards, permanent sparkles, and ornamental icons.
 
 ## Collaboration Rules
 
