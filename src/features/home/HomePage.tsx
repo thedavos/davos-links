@@ -57,8 +57,7 @@ export function HomePage() {
             </Button>
             <Button
               asChild
-              ditherColor="blue"
-              ditherVariant="solid"
+              ditherVariant="dotted-subtle"
               variant="ghost"
             >
               <Link to="/login">Iniciar sesión</Link>
