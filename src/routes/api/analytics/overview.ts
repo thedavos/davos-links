@@ -1,12 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireUser } from '#/lib/auth/server'
-import { getAnalyticsOverviewForRange, parseDateRange } from '#/lib/analytics/index'
+import {
+  getAnalyticsOverviewForRange,
+  isDateRangeValidationError,
+  parseDateRange,
+} from '#/lib/analytics/index'
 import { json } from '#/lib/http'
 
 export async function analyticsOverviewHandler(request: Request) {
   await requireUser(request.headers)
   const url = new URL(request.url)
-  return json(await getAnalyticsOverviewForRange(parseDateRange(url)))
+  try {
+    return json(await getAnalyticsOverviewForRange(parseDateRange(url)))
+  } catch (error) {
+    if (!isDateRangeValidationError(error)) throw error
+    return json(
+      { code: error.code, error: error.message, field: error.field },
+      { status: 400 },
+    )
+  }
 }
 
 export const Route = createFileRoute('/api/analytics/overview')({

@@ -1,12 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireUser } from '#/lib/auth/server'
-import { getLinkAnalytics, parseDateRange } from '#/lib/analytics/index'
+import {
+  getLinkAnalytics,
+  isDateRangeValidationError,
+  parseDateRange,
+} from '#/lib/analytics/index'
 import { json } from '#/lib/http'
 
 export async function linkAnalyticsHandler(request: Request, id: string) {
   await requireUser(request.headers)
   const url = new URL(request.url)
-  return json(await getLinkAnalytics(id, parseDateRange(url)))
+  try {
+    return json(await getLinkAnalytics(id, parseDateRange(url)))
+  } catch (error) {
+    if (!isDateRangeValidationError(error)) throw error
+    return json(
+      { code: error.code, error: error.message, field: error.field },
+      { status: 400 },
+    )
+  }
 }
 
 export const Route = createFileRoute('/api/links/$id/analytics')({

@@ -24,6 +24,12 @@ const mocks = vi.hoisted(() => ({
   getAnalyticsOverview: vi.fn(),
   exportMetricsCsv: vi.fn(),
   parseDateRange: vi.fn(() => ({ from: '2026-07-01', to: '2026-07-07' })),
+  isDateRangeValidationError: vi.fn(
+    (error: unknown) =>
+      error instanceof Error &&
+      'code' in error &&
+      error.code === 'invalid_date_range',
+  ),
 }))
 
 vi.mock('../../src/lib/auth/server', () => ({
@@ -44,6 +50,7 @@ vi.mock('../../src/lib/analytics', () => ({
   getAnalyticsOverviewForRange: mocks.getAnalyticsOverview,
   exportMetricsCsv: mocks.exportMetricsCsv,
   parseDateRange: mocks.parseDateRange,
+  isDateRangeValidationError: mocks.isDateRangeValidationError,
 }))
 
 describe('link detail API handlers', () => {
@@ -115,5 +122,28 @@ describe('link detail API handlers', () => {
       { from: '2026-07-01', to: '2026-07-07' },
       null,
     )
+  })
+
+  it('returns a clear 400 response for invalid analytics ranges', async () => {
+    const rangeError = Object.assign(new Error('El rango no es válido.'), {
+      code: 'invalid_date_range',
+      field: 'range',
+    })
+    mocks.parseDateRange.mockImplementationOnce(() => {
+      throw rangeError
+    })
+
+    const response = await analyticsOverviewHandler(
+      new Request(
+        'https://x/api/analytics/overview?from=2026-07-07&to=2026-07-01',
+      ),
+    )
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      code: 'invalid_date_range',
+      error: 'El rango no es válido.',
+      field: 'range',
+    })
   })
 })

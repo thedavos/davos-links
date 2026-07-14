@@ -4,7 +4,19 @@ import {
   getTrafficBreakdowns,
 } from '#/lib/analytics/breakdowns'
 import { DEFAULT_WORKSPACE_ID } from '#/lib/constants'
-import type { CachedLink } from '#/lib/types'
+import type {
+  AnalyticsDateRange,
+  AnalyticsDelta,
+  AnalyticsOverview,
+  AnalyticsPerformanceTotals,
+  AnalyticsSeriesPoint,
+  CachedLink,
+} from '#/lib/types'
+
+const ANALYTICS_TIMEZONE = 'UTC' as const
+const DEFAULT_RANGE_DAYS = 30
+export const MAX_ANALYTICS_RANGE_DAYS = 366
+const TOP_LINKS_LIMIT = 5
 
 const BOT_PATTERNS = [
   'Googlebot',
@@ -145,68 +157,181 @@ export async function getAnalyticsOverview() {
   return getAnalyticsOverviewForRange(defaultRange())
 }
 
-export async function getAnalyticsOverviewForRange(range: DateRange) {
+export async function getAnalyticsOverviewForRange(
+  range: DateRange,
+): Promise<AnalyticsOverview> {
+  validateDateRange(range)
   const previousRange = previousDateRange(range)
-  const { results } = await env.LINKS_DB.prepare(
-    `SELECT metric_date, SUM(clicks) AS clicks, SUM(bot_clicks) AS bot_clicks
+  const currentSeriesQuery = env.LINKS_DB.prepare(
+    `SELECT
+       metric_date,
+       SUM(MAX(clicks - bot_clicks, 0)) AS human_clicks,
+       SUM(MAX(bot_clicks, 0)) AS bot_clicks
      FROM daily_link_metrics
      WHERE workspace_id = ? AND metric_date BETWEEN ? AND ?
      GROUP BY metric_date
      ORDER BY metric_date ASC`,
   )
     .bind(DEFAULT_WORKSPACE_ID, range.from, range.to)
-    .all<AnalyticsPoint>()
+    .all<OverviewSeriesRow>()
 
-  const { results: previousResults } = await env.LINKS_DB.prepare(
-    `SELECT metric_date, SUM(clicks) AS clicks, SUM(bot_clicks) AS bot_clicks
+  const previousSeriesQuery = env.LINKS_DB.prepare(
+    `SELECT
+       metric_date,
+       SUM(MAX(clicks - bot_clicks, 0)) AS human_clicks,
+       SUM(MAX(bot_clicks, 0)) AS bot_clicks
      FROM daily_link_metrics
      WHERE workspace_id = ? AND metric_date BETWEEN ? AND ?
      GROUP BY metric_date
      ORDER BY metric_date ASC`,
   )
     .bind(DEFAULT_WORKSPACE_ID, previousRange.from, previousRange.to)
-    .all<AnalyticsPoint>()
+    .all<OverviewSeriesRow>()
 
-  const totals = await env.LINKS_DB.prepare(
+  const currentTotalsQuery = env.LINKS_DB.prepare(
     `SELECT
-      COALESCE(SUM(clicks), 0) AS total_clicks,
-      COALESCE(SUM(CASE WHEN metric_date >= date('now', '-7 days') THEN clicks ELSE 0 END), 0) AS clicks_7d,
-      COALESCE(SUM(CASE WHEN metric_date >= date('now', '-30 days') THEN clicks ELSE 0 END), 0) AS clicks_30d
+       COALESCE(SUM(MAX(clicks - bot_clicks, 0)), 0) AS human_clicks,
+       COALESCE(SUM(MAX(bot_clicks, 0)), 0) AS bot_clicks,
+       COUNT(DISTINCT CASE
+         WHEN MAX(clicks - bot_clicks, 0) > 0 THEN link_id
+       END) AS links_with_activity
      FROM daily_link_metrics
      WHERE workspace_id = ? AND metric_date BETWEEN ? AND ?`,
   )
     .bind(DEFAULT_WORKSPACE_ID, range.from, range.to)
-    .first<{ total_clicks: number; clicks_7d: number; clicks_30d: number }>()
+    .first<OverviewTotalsRow>()
 
-  const activeLinks = await env.LINKS_DB.prepare(
+  const previousTotalsQuery = env.LINKS_DB.prepare(
+    `SELECT
+       COALESCE(SUM(MAX(clicks - bot_clicks, 0)), 0) AS human_clicks,
+       COALESCE(SUM(MAX(bot_clicks, 0)), 0) AS bot_clicks,
+       COUNT(DISTINCT CASE
+         WHEN MAX(clicks - bot_clicks, 0) > 0 THEN link_id
+       END) AS links_with_activity
+     FROM daily_link_metrics
+     WHERE workspace_id = ? AND metric_date BETWEEN ? AND ?`,
+  )
+    .bind(DEFAULT_WORKSPACE_ID, previousRange.from, previousRange.to)
+    .first<OverviewTotalsRow>()
+
+  const activeLinksQuery = env.LINKS_DB.prepare(
     `SELECT COUNT(*) AS active_links FROM links
      WHERE workspace_id = ? AND status = 'active' AND deleted_at IS NULL`,
   )
     .bind(DEFAULT_WORKSPACE_ID)
     .first<{ active_links: number }>()
 
-  const series = normalizeSeries(results, range)
-  const previousSeries = normalizeSeries(previousResults, previousRange)
-  const breakdowns = await getGlobalTrafficBreakdowns(range)
+  const topLinksQuery = env.LINKS_DB.prepare(
+    `WITH current_metrics AS (
+       SELECT
+         link_id,
+         SUM(MAX(clicks - bot_clicks, 0)) AS current_human_clicks
+       FROM daily_link_metrics
+       WHERE workspace_id = ? AND metric_date BETWEEN ? AND ?
+       GROUP BY link_id
+     ), previous_metrics AS (
+       SELECT
+         link_id,
+         SUM(MAX(clicks - bot_clicks, 0)) AS previous_human_clicks
+       FROM daily_link_metrics
+       WHERE workspace_id = ? AND metric_date BETWEEN ? AND ?
+       GROUP BY link_id
+     )
+     SELECT
+       links.id,
+       links.title,
+       links.short_path,
+       current_metrics.current_human_clicks,
+       COALESCE(previous_metrics.previous_human_clicks, 0) AS previous_human_clicks
+     FROM current_metrics
+     INNER JOIN links ON links.id = current_metrics.link_id
+     LEFT JOIN previous_metrics ON previous_metrics.link_id = current_metrics.link_id
+     WHERE links.workspace_id = ?
+       AND links.deleted_at IS NULL
+       AND current_metrics.current_human_clicks > 0
+     ORDER BY
+       current_metrics.current_human_clicks DESC,
+       LOWER(links.title) ASC,
+       links.id ASC
+     LIMIT ${TOP_LINKS_LIMIT}`,
+  )
+    .bind(
+      DEFAULT_WORKSPACE_ID,
+      range.from,
+      range.to,
+      DEFAULT_WORKSPACE_ID,
+      previousRange.from,
+      previousRange.to,
+      DEFAULT_WORKSPACE_ID,
+    )
+    .all<TopLinkRow>()
+
+  const [
+    { results: currentSeriesRows },
+    { results: previousSeriesRows },
+    currentTotalsRow,
+    previousTotalsRow,
+    activeLinks,
+    { results: topLinkRows },
+    breakdowns,
+  ] = await Promise.all([
+    currentSeriesQuery,
+    previousSeriesQuery,
+    currentTotalsQuery,
+    previousTotalsQuery,
+    activeLinksQuery,
+    topLinksQuery,
+    getGlobalTrafficBreakdowns(range),
+  ])
+
+  const rangeDays = rangeDurationInDays(range)
+  const previousRangeDays = rangeDurationInDays(previousRange)
+  const totals = toPerformanceTotals(currentTotalsRow, rangeDays)
+  const previousTotals = toPerformanceTotals(previousTotalsRow, previousRangeDays)
+  const series = normalizeOverviewSeries(currentSeriesRows, range)
+  const previousSeries = normalizeOverviewSeries(previousSeriesRows, previousRange)
 
   return {
-    totals: {
-      totalClicks: totals?.total_clicks ?? 0,
-      clicks7d: totals?.clicks_7d ?? 0,
-      clicks30d: totals?.clicks_30d ?? 0,
-      activeLinks: activeLinks?.active_links ?? 0,
-    },
-    series,
-    previousSeries,
-    comparison: compareSeries(series, previousSeries),
-    heatmap: series,
-    breakdowns,
+    timezone: ANALYTICS_TIMEZONE,
     range,
     previousRange,
+    totals,
+    previousTotals,
+    activeLinksNow: toNonNegativeCount(activeLinks?.active_links),
+    series,
+    previousSeries,
+    breakdowns,
+    comparison: {
+      humanClicks: compareMetric(totals.humanClicks, previousTotals.humanClicks),
+      botClicks: compareMetric(totals.botClicks, previousTotals.botClicks),
+      linksWithActivity: compareMetric(
+        totals.linksWithActivity,
+        previousTotals.linksWithActivity,
+      ),
+      averageDailyHumanClicks: compareMetric(
+        totals.averageDailyHumanClicks,
+        previousTotals.averageDailyHumanClicks,
+      ),
+    },
+    topLinks: topLinkRows.map((row) => {
+      const humanClicks = toNonNegativeCount(row.current_human_clicks)
+      const previousHumanClicks = toNonNegativeCount(row.previous_human_clicks)
+      return {
+        id: row.id,
+        title: row.title,
+        shortPath: row.short_path,
+        humanClicks,
+        sharePercent: totals.humanClicks > 0
+          ? (humanClicks / totals.humanClicks) * 100
+          : 0,
+        delta: compareMetric(humanClicks, previousHumanClicks),
+      }
+    }),
   }
 }
 
 export async function getLinkAnalytics(linkId: string, range = defaultRange()) {
+  validateDateRange(range)
   const previousRange = previousDateRange(range)
   const { results } = await env.LINKS_DB.prepare(
     `SELECT metric_date, clicks, bot_clicks
@@ -247,6 +372,7 @@ export async function getLinkAnalytics(linkId: string, range = defaultRange()) {
 }
 
 export async function exportMetricsCsv(range: DateRange, linkId?: string | null) {
+  validateDateRange(range)
   const where = [
     'daily_link_metrics.workspace_id = ?',
     'daily_link_metrics.metric_date BETWEEN ? AND ?',
@@ -266,6 +392,7 @@ export async function exportMetricsCsv(range: DateRange, linkId?: string | null)
       links.short_path,
       domains.domain,
       daily_link_metrics.clicks,
+      MAX(daily_link_metrics.clicks - daily_link_metrics.bot_clicks, 0) AS human_clicks,
       daily_link_metrics.bot_clicks,
       daily_link_metrics.unique_visitors
      FROM daily_link_metrics
@@ -282,6 +409,7 @@ export async function exportMetricsCsv(range: DateRange, linkId?: string | null)
       short_path: string
       domain: string
       clicks: number
+      human_clicks: number
       bot_clicks: number
       unique_visitors: number
     }>()
@@ -293,6 +421,7 @@ export async function exportMetricsCsv(range: DateRange, linkId?: string | null)
       'title',
       'short_url',
       'clicks',
+      'human_clicks',
       'bot_clicks',
       'unique_visitors',
     ],
@@ -302,16 +431,14 @@ export async function exportMetricsCsv(range: DateRange, linkId?: string | null)
       row.title,
       `https://${row.domain}/${row.short_path}`,
       String(row.clicks),
+      String(toNonNegativeCount(row.human_clicks)),
       String(row.bot_clicks),
       String(row.unique_visitors),
     ]),
   ])
 }
 
-export type DateRange = {
-  from: string
-  to: string
-}
+export type DateRange = AnalyticsDateRange
 
 export type AnalyticsPoint = {
   metric_date: string
@@ -327,19 +454,103 @@ export type AnalyticsComparison = {
   trend: 'up' | 'down' | 'flat'
 }
 
-export function parseDateRange(url: URL): DateRange {
-  const fallback = defaultRange()
-  const range = {
-    from: validDate(url.searchParams.get('from')) ?? fallback.from,
-    to: validDate(url.searchParams.get('to')) ?? fallback.to,
+type OverviewSeriesRow = {
+  metric_date: string
+  human_clicks: number
+  bot_clicks: number
+}
+
+type OverviewTotalsRow = {
+  human_clicks: number
+  bot_clicks: number
+  links_with_activity: number
+}
+
+type TopLinkRow = {
+  id: string
+  title: string
+  short_path: string
+  current_human_clicks: number
+  previous_human_clicks: number
+}
+
+export type DateRangeValidationField = 'from' | 'to' | 'range'
+
+export class DateRangeValidationError extends Error {
+  readonly code = 'invalid_date_range' as const
+
+  constructor(
+    message: string,
+    readonly field: DateRangeValidationField,
+  ) {
+    super(message)
+    this.name = 'DateRangeValidationError'
   }
-  return range.from <= range.to ? range : { from: range.to, to: range.from }
+}
+
+export function isDateRangeValidationError(
+  error: unknown,
+): error is DateRangeValidationError {
+  return error instanceof DateRangeValidationError
+}
+
+export function parseDateRange(url: URL): DateRange {
+  const rawFrom = url.searchParams.get('from')
+  const rawTo = url.searchParams.get('to')
+
+  if (rawFrom === null && rawTo === null) return defaultRange()
+  if (rawFrom === null) {
+    throw new DateRangeValidationError('La fecha inicial es obligatoria.', 'from')
+  }
+  if (rawTo === null) {
+    throw new DateRangeValidationError('La fecha final es obligatoria.', 'to')
+  }
+  if (!validDate(rawFrom)) {
+    throw new DateRangeValidationError('La fecha inicial no es válida.', 'from')
+  }
+  if (!validDate(rawTo)) {
+    throw new DateRangeValidationError('La fecha final no es válida.', 'to')
+  }
+
+  return validateDateRange({ from: rawFrom, to: rawTo })
+}
+
+export function validateDateRange(range: DateRange): DateRange {
+  if (!validDate(range.from)) {
+    throw new DateRangeValidationError('La fecha inicial no es válida.', 'from')
+  }
+  if (!validDate(range.to)) {
+    throw new DateRangeValidationError('La fecha final no es válida.', 'to')
+  }
+  if (range.from > range.to) {
+    throw new DateRangeValidationError(
+      'La fecha inicial no puede ser posterior a la fecha final.',
+      'range',
+    )
+  }
+
+  const today = toDateString(new Date())
+  if (range.from > today || range.to > today) {
+    throw new DateRangeValidationError(
+      'El rango no puede incluir fechas futuras.',
+      'range',
+    )
+  }
+
+  if (rangeDurationInDays(range) > MAX_ANALYTICS_RANGE_DAYS) {
+    throw new DateRangeValidationError(
+      `El rango no puede superar ${MAX_ANALYTICS_RANGE_DAYS} días.`,
+      'range',
+    )
+  }
+
+  return range
 }
 
 function defaultRange(): DateRange {
   const to = new Date()
   const from = new Date(to)
-  from.setUTCDate(from.getUTCDate() - 29)
+  from.setUTCDate(from.getUTCDate() - (DEFAULT_RANGE_DAYS - 1))
   return { from: toDateString(from), to: toDateString(to) }
 }
 
@@ -350,6 +561,54 @@ function previousDateRange(range: DateRange): DateRange {
   const previousTo = addDays(from, -1)
   const previousFrom = addDays(previousTo, -(days - 1))
   return { from: toDateString(previousFrom), to: toDateString(previousTo) }
+}
+
+function normalizeOverviewSeries(
+  points: OverviewSeriesRow[],
+  range: DateRange,
+): AnalyticsSeriesPoint[] {
+  const byDate = new Map(points.map((point) => [point.metric_date, point]))
+  return eachDate(range).map((metric_date) => {
+    const point = byDate.get(metric_date)
+    return {
+      metric_date,
+      human_clicks: toNonNegativeCount(point?.human_clicks),
+      bot_clicks: toNonNegativeCount(point?.bot_clicks),
+    }
+  })
+}
+
+function toPerformanceTotals(
+  row: OverviewTotalsRow | null,
+  rangeDays: number,
+): AnalyticsPerformanceTotals {
+  const humanClicks = toNonNegativeCount(row?.human_clicks)
+  return {
+    humanClicks,
+    botClicks: toNonNegativeCount(row?.bot_clicks),
+    linksWithActivity: toNonNegativeCount(row?.links_with_activity),
+    averageDailyHumanClicks: rangeDays > 0 ? humanClicks / rangeDays : 0,
+  }
+}
+
+export function compareMetric(current: number, previous: number): AnalyticsDelta {
+  const safeCurrent = toNonNegativeNumber(current)
+  const safePrevious = toNonNegativeNumber(previous)
+  const absolute = safeCurrent - safePrevious
+
+  if (safePrevious === 0) {
+    if (safeCurrent > 0) {
+      return { status: 'new', absolute, percent: null, trend: 'up' }
+    }
+    return { status: 'no-baseline', absolute: 0, percent: null, trend: 'flat' }
+  }
+
+  return {
+    status: 'comparable',
+    absolute,
+    percent: (absolute / safePrevious) * 100,
+    trend: absolute > 0 ? 'up' : absolute < 0 ? 'down' : 'flat',
+  }
 }
 
 function normalizeSeries(points: AnalyticsPoint[], range: DateRange) {
@@ -411,7 +670,21 @@ function differenceInDays(from: Date, to: Date) {
 
 function validDate(value: string | null) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
-  return Number.isNaN(new Date(`${value}T00:00:00.000Z`).getTime()) ? null : value
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  return Number.isNaN(parsed.getTime()) || toDateString(parsed) !== value ? null : value
+}
+
+function rangeDurationInDays(range: DateRange) {
+  return differenceInDays(parseDateString(range.from), parseDateString(range.to)) + 1
+}
+
+function toNonNegativeCount(value: unknown) {
+  return Math.round(toNonNegativeNumber(value))
+}
+
+function toNonNegativeNumber(value: unknown) {
+  const number = Number(value ?? 0)
+  return Number.isFinite(number) ? Math.max(0, number) : 0
 }
 
 function toDateString(date: Date) {

@@ -103,3 +103,68 @@ export type AnalyticsBreakdowns = {
   countries: AnalyticsBreakdownItem[]
   devices: AnalyticsBreakdownItem[]
 }
+export type AnalyticsDateRange = {
+  from: string
+  to: string
+}
+
+export type AnalyticsDelta =
+  | {
+      status: 'comparable'
+      absolute: number
+      percent: number
+      trend: 'up' | 'down' | 'flat'
+    }
+  | {
+      status: 'new'
+      absolute: number
+      percent: null
+      trend: 'up'
+    }
+  | {
+      status: 'no-baseline'
+      absolute: 0
+      percent: null
+      trend: 'flat'
+    }
+
+export type AnalyticsPerformanceTotals = {
+  humanClicks: number
+  botClicks: number
+  linksWithActivity: number
+  averageDailyHumanClicks: number
+}
+
+export type AnalyticsSeriesPoint = {
+  metric_date: string
+  human_clicks: number
+  bot_clicks: number
+}
+
+export type AnalyticsTopLink = {
+  id: string
+  title: string
+  shortPath: string
+  humanClicks: number
+  sharePercent: number
+  delta: AnalyticsDelta
+}
+
+export type AnalyticsOverview = {
+  timezone: 'UTC'
+  range: AnalyticsDateRange
+  previousRange: AnalyticsDateRange
+  totals: AnalyticsPerformanceTotals
+  previousTotals: AnalyticsPerformanceTotals
+  activeLinksNow: number
+  series: AnalyticsSeriesPoint[]
+  previousSeries: AnalyticsSeriesPoint[]
+  breakdowns: AnalyticsBreakdowns
+  comparison: {
+    humanClicks: AnalyticsDelta
+    botClicks: AnalyticsDelta
+    linksWithActivity: AnalyticsDelta
+    averageDailyHumanClicks: AnalyticsDelta
+  }
+  topLinks: AnalyticsTopLink[]
+}
